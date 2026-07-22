@@ -1,0 +1,42 @@
+/* public/css/base.css */
+
+:root {
+    --verde-oscuro: #1b4332;
+    --verde-selva: #2d6a4f;
+    --verde-claro: #52b788;
+    --verde-menta: #d8f3dc;
+    --naranja-pizza: #e67e22;
+    --amarillo-queso: #f1c40f;
+    --blanco: #ffffff;
+    --gris-fondo: #f4f7f5;
+    --texto-oscuro: #2d3748;
+    --fuente-sistema: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--fuente-sistema);
+    background-color: var(--gris-fondo);
+    color: var(--texto-oscuro);
+    line-height: 1.6;
+    padding: 10px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Área de toque móvil universal */
+input, button, .btn {
+    font-family: var(--fuente-sistema);
+}
+
+@media (min-width: 768px) {
+    body {
+        padding: 25px;
+    }
+}

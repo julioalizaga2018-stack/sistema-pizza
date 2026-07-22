@@ -1,0 +1,222 @@
+/* =========================================================================
+   ESTILOS CORREGIDOS DEL SIDEBAR Y RESPONSIVO (JUNGLE PIZZA)
+   ========================================================================= */
+
+:root {
+    --bg-sidebar: #1e1e24;
+    --bg-submenu: #121214;
+    --text-color: #ffffff;
+    --text-muted: #a0a0a5;
+    --hover-color: #ff5722; /* Color naranja pizzería */
+    --logout-hover: #e63946;
+}
+
+/* Contenedor estructural principal */
+.dashboard-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+.main-content {
+    flex: 1;
+    padding: 30px;
+    background-color: #f5f6fa;
+}
+
+/* Estilos de la Barra Lateral */
+.sidebar {
+    width: 260px;
+    background-color: var(--bg-sidebar);
+    color: var(--text-color);
+    padding: 20px;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+    
+    /* Habilitamos Flexbox para empujar el botón de salida al fondo */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.sidebar-brand {
+    padding-bottom: 20px;
+    border-bottom: 1px solid #2a2a35;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.nav-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.nav-link, .menu-btn {
+    width: 100%;
+    background: none;
+    border: none;
+    color: var(--text-color);
+    text-align: left;
+    padding: 12px 15px;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 6px;
+    text-decoration: none;
+    transition: all 0.2s;
+    margin-bottom: 5px;
+    box-sizing: border-box;
+}
+
+.nav-link:hover, .menu-btn:hover, .nav-link.active {
+    background-color: var(--hover-color);
+    color: white;
+}
+
+.logout-btn:hover {
+    background-color: var(--logout-hover) !important;
+}
+
+/* Flecha del Menú */
+.arrow {
+    border: solid var(--text-color);
+    border-width: 0 2px 2px 0;
+    display: inline-block;
+    padding: 3px;
+    transform: rotate(45deg);
+    transition: transform 0.3s ease;
+}
+
+.arrow.open {
+    transform: rotate(-135deg);
+}
+
+/* Submenú Oculto por defecto, se despliega con JS max-height */
+.submenu {
+    max-height: 0;
+    overflow: hidden;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    background-color: var(--bg-submenu);
+    border-radius: 0 0 6px 6px;
+    transition: max-height 0.3s ease-out;
+}
+
+/* Enlaces internos individuales del submenú */
+.submenu li a {
+    display: block;
+    padding: 10px 20px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+/* Hover e iluminación activa para el submenú */
+.submenu li a:hover, .submenu li a.active {
+    color: #ffffff;
+    background-color: #2a2a35;
+}
+
+/* --- NUEVOS COMPONENTES RESPONSIVOS (CORREGIDO COMENTARIO) --- */
+
+/* Ocultar barra superior en pantallas de escritorio */
+.mobile-header {
+    display: none;
+}
+.sidebar-overlay {
+    display: none;
+}
+
+/* --- RESPONSIVO PARA MÓVILES Y TABLETS (UNIFICADO EN UN SOLO BLOQUE) --- */
+@media (max-width: 768px) {
+    /* Mostramos la barra superior */
+    .mobile-header {
+        display: flex;
+        align-items: center;
+        background-color: var(--bg-sidebar);
+        padding: 15px 20px;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 60px;
+        z-index: 1000;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        box-sizing: border-box;
+    }
+
+    .mobile-logo {
+        color: var(--text-color);
+        font-size: 18px;
+        font-weight: bold;
+        margin-left: 15px;
+    }
+
+    /* Estilo del Botón Hamburguesa */
+    .hamburger-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        width: 24px;
+        height: 18px;
+        padding: 0;
+    }
+
+    .hamburger-btn span {
+        display: block;
+        width: 100%;
+        height: 3px;
+        background-color: var(--text-color);
+        border-radius: 2px;
+        transition: all 0.3s ease;
+    }
+
+    /* Ajuste estructural general bajo la barra superior */
+    .dashboard-layout {
+        flex-direction: column;
+        padding-top: 60px; /* Evita que la barra móvil tape el contenido */
+    }
+
+    /* Transformamos el Sidebar en un panel flotante oculto por defecto */
+    .sidebar {
+        position: fixed;
+        top: 60px;
+        left: -260px; /* Lo esconde hacia la izquierda */
+        width: 260px;
+        height: calc(100vh - 60px);
+        z-index: 999;
+        box-shadow: 5px 0 15px rgba(0,0,0,0.3);
+        transition: left 0.3s ease;
+    }
+
+    /* Clase activa para mostrar la barra lateral */
+    .sidebar.open {
+        left: 0;
+    }
+
+    /* Capa oscura que bloquea el fondo al desplegar el menú */
+    .sidebar-overlay.active {
+        display: block;
+        position: fixed;
+        top: 60px;
+        left: 0;
+        width: 100vw;
+        height: calc(100vh - 60px);
+        background-color: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(2px);
+        z-index: 998;
+    }
+
+    .sidebar-bottom {
+        margin-top: auto;
+        padding-bottom: 20px;
+    }
+}

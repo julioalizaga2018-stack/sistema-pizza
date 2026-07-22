@@ -1,0 +1,108 @@
+/* public/css/usuarios.css */
+
+/* --- Contenedor en Cuadrícula Dinámica --- */
+.gestion-container {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 25px;
+    margin-top: 20px;
+    width: 100%;
+}
+
+/* --- Tarjetas del Sistema (Cards) --- */
+.jungle-card {
+    background: var(--blanco);
+    border-radius: 14px;
+    box-shadow: 0 5px 15px rgba(27, 67, 50, 0.06);
+    padding: 25px;
+    border-top: 4px solid var(--verde-claro);
+}
+
+.jungle-card h3 {
+    color: var(--verde-oscuro);
+    font-size: 1.3rem;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 2px solid var(--verde-menta);
+    padding-bottom: 10px;
+}
+
+/* --- Estilos del Formulario y Combo Select Táctil --- */
+.form-group select.form-control {
+    width: 100%;
+    padding: 14px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 1rem;
+    background-color: #fafbfc;
+    color: var(--texto-oscuro);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.form-group select.form-control:focus {
+    outline: none;
+    border-color: var(--verde-claro);
+    box-shadow: 0 0 0 3px rgba(82, 183, 136, 0.2);
+}
+
+/* --- Tabla Responsiva y Moderna --- */
+.table-wrapper {
+    width: 100%;
+    overflow-x: auto; /* Scroll horizontal suave en celulares */
+    border-radius: 10px;
+    border: 1px solid #edf2f7;
+}
+
+.jungle-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    min-width: 500px; /* Evita que la tabla se comprima demasiado */
+}
+
+.jungle-table th {
+    background-color: var(--verde-selva);
+    color: var(--blanco);
+    padding: 14px 16px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.jungle-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #edf2f7;
+    color: var(--texto-oscuro);
+    font-size: 0.95rem;
+    vertical-align: middle;
+}
+
+.jungle-table tr:hover {
+    background-color: rgba(216, 243, 220, 0.3); /* Destello verde selva suave al pasar el cursor o pulsar */
+}
+
+/* --- Etiquetas de Roles Estilizadas --- */
+.badge-rol {
+    display: inline-block;
+    background-color: var(--verde-menta);
+    color: var(--verde-oscuro);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+/* ============================================================================
+   🖥️ RESPONSIVIDAD: Ajuste de Diseño para Pantallas Grandes (Tablets/PC)
+   ============================================================================ */
+@media (min-width: 992px) {
+    .gestion-container {
+        grid-template-columns: 380px 1fr; /* Formulario fijo a la izquierda, tabla expandida a la derecha */
+        align-items: start;
+    }
+}

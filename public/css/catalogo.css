@@ -1,0 +1,145 @@
+/* public/css/catalogo.css */
+
+/* --- Contenedor Principal en Grid --- */
+.dashboard-container {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    min-height: 100vh;
+    margin: -10px; /* Compensa el padding del body global */
+}
+
+/* --- Barra Superior (Para Móviles) --- */
+.dashboard-header {
+    background-color: var(--verde-oscuro);
+    color: var(--blanco);
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 3px solid var(--verde-claro);
+}
+
+.user-badge {
+    background-color: var(--verde-selva);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+/* --- Menú Lateral (Sidebar) --- */
+.sidebar {
+    background-color: var(--verde-oscuro);
+    color: var(--blanco);
+    padding: 20px 10px;
+}
+
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 10px 20px 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    margin-bottom: 15px;
+}
+
+.sidebar-pizza-icon {
+    width: 32px;
+    height: 32px;
+    fill: var(--amarillo-queso);
+}
+
+.sidebar-menu {
+    list-style: none;
+    display: flex;
+    flex-direction: row; /* En celulares los botones se alinean horizontalmente */
+    overflow-x: auto;   /* Permite scroll horizontal si no caben las opciones */
+    gap: 5px;
+    padding-bottom: 10px;
+}
+
+.menu-item {
+    width: auto;
+}
+
+.menu-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--verde-menta);
+    text-decoration: none;
+    padding: 12px 15px;
+    border-radius: 8px;
+    font-weight: 500;
+    white-space: nowrap; /* Evita que el texto se rompa en líneas en móvil */
+    transition: all 0.2s ease;
+}
+
+.menu-link:hover, .menu-link.active {
+    background-color: var(--verde-selva);
+    color: var(--blanco);
+}
+
+/* --- Submenús Desplegables / Secciones --- */
+.submenu-title {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--verde-claro);
+    padding: 10px 10px 5px 10px;
+    font-weight: bold;
+}
+
+.submenu-list {
+    list-style: none;
+    padding-left: 15px;
+}
+
+/* --- Área de Contenido Principal --- */
+.main-content {
+    padding: 20px;
+    background-color: var(--gris-fondo);
+}
+
+.btn-logout {
+    background-color: #c92a2a;
+    color: white;
+    text-decoration: none;
+    padding: 8px 15px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: bold;
+}
+
+/* ============================================================================
+   🖥️ RESPONSIVIDAD: Ajustes para Tablets y Computadoras (Pantallas Medianas/Grandes)
+   ============================================================================ */
+@media (min-width: 768px) {
+    .dashboard-container {
+        grid-template-columns: 260px 1fr; /* Sidebar fijo a la izquierda */
+        grid-template-rows: 1fr;
+    }
+
+    .dashboard-header {
+        display: none; /* Ocultamos barra móvil, el sidebar maneja todo */
+    }
+
+    .sidebar {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 100vh;
+    }
+
+    .sidebar-menu {
+        flex-direction: column; /* Lista vertical clásica */
+        overflow-x: visible;
+        gap: 8px;
+    }
+
+    .menu-link {
+        white-space: normal;
+        width: 100%;
+    }
+}
