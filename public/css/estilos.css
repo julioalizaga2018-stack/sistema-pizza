@@ -185,38 +185,60 @@
         padding-top: 60px; /* Evita que la barra móvil tape el contenido */
     }
 
-    /* Transformamos el Sidebar en un panel flotante oculto por defecto */
-    .sidebar {
-        position: fixed;
-        top: 60px;
-        left: -260px; /* Lo esconde hacia la izquierda */
-        width: 260px;
-        height: calc(100vh - 60px);
-        z-index: 999;
-        box-shadow: 5px 0 15px rgba(0,0,0,0.3);
-        transition: left 0.3s ease;
-    }
+ /* Transformamos el Sidebar en un panel flotante oculto por defecto (Corregido y Visible) */
+.sidebar {
+    position: fixed;
+    top: 60px;
+    left: -260px; /* Lo esconde hacia la izquierda */
+    width: 260px;
+    height: calc(100vh - 60px);
+    z-index: 999;
+    box-shadow: 5px 0 15px rgba(0,0,0,0.3);
+    transition: left 0.3s ease;
+    background-color: #1e1e24; /* Asegúrate de conservar tu color de fondo oscuro original */
 
-    /* Clase activa para mostrar la barra lateral */
-    .sidebar.open {
-        left: 0;
-    }
+    /* 🌟 SOLUCIÓN FLEXBOX PARA VISIBILIDAD Y SCROLL */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    
+    overflow-y: auto;       /* Activa la barra de scroll si el menú se llena */
+    overflow-x: hidden;     /* Evita movimientos laterales por error */
+    -webkit-overflow-scrolling: touch; /* Deslizamiento elástico con el dedo */
+}
 
-    /* Capa oscura que bloquea el fondo al desplegar el menú */
-    .sidebar-overlay.active {
-        display: block;
-        position: fixed;
-        top: 60px;
-        left: 0;
-        width: 100vw;
-        height: calc(100vh - 60px);
-        background-color: rgba(0, 0, 0, 0.5);
-        backdrop-filter: blur(2px);
-        z-index: 998;
-    }
+/* Clase activa para mostrar la barra lateral */
+.sidebar.open {
+    left: 0;
+}
 
-    .sidebar-bottom {
-        margin-top: auto;
-        padding-bottom: 20px;
-    }
+/* Capa oscura que bloquea el fondo al desplegar el menú */
+.sidebar-overlay.active {
+    display: block;
+    position: fixed;
+    top: 60px;
+    left: 0;
+    width: 100vw;
+    height: calc(100vh - 60px);
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    z-index: 998;
+}
+
+/* Asegura que el botón de cerrar sesión se quede fijo abajo sin colapsar el menú */
+.sidebar-bottom {
+    margin-top: auto;
+    padding: 20px 0;
+    width: 100%;
+}
+
+/* 🎨 Estilo elegante para la barra de scroll estilo Jungle Pizza */
+.sidebar::-webkit-scrollbar {
+    width: 5px;
+}
+.sidebar::-webkit-scrollbar-thumb {
+    background: #52b788; /* Tu verde claro de la jungla */
+    border-radius: 10px;
+}
+
 }

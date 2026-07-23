@@ -1,4 +1,6 @@
-// CONTROL 1: Desplegar/Recoger el submenú de Configuración de forma elástica
+// public/js/main.js
+
+// CONTROL 1: Desplegar/Recoger el submenú de Configuración original (Tu código intacto)
 function toggleMenu() {
     const submenu = document.getElementById('config-submenu');
     const arrow = document.getElementById('menu-arrow');
@@ -9,7 +11,6 @@ function toggleMenu() {
         arrow.classList.remove('open');
         btn.setAttribute('aria-expanded', 'false');
     } else {
-        // scrollHeight calcula en píxeles el alto real dinámico del contenido
         submenu.style.maxHeight = submenu.scrollHeight + "px";
         arrow.classList.add('open');
         btn.setAttribute('aria-expanded', 'true');
@@ -30,8 +31,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const urlParams = new URLSearchParams(window.location.search);
     const vista = urlParams.get('v');
     
-    // Si la URL actual es index.php?v=usuarios, forzamos la apertura automática
-    if (vista === 'usuarios') {
+    if (vista === 'gestion_usuarios' || vista === 'config_empresa') {
         const submenu = document.getElementById('config-submenu');
         const arrow = document.getElementById('menu-arrow');
         const btn = document.querySelector('.menu-btn');
