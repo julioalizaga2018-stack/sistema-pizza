@@ -1,27 +1,28 @@
 <?php
-// index.php (Raíz del proyecto)
+// index.php (Raíz del proyecto - Ecosistema Jungle Pizza)
 
-// 1. Forzar a PHP a mostrar cualquier error oculto en pantalla
+// 1. Forzar a PHP a mostrar cualquier error oculto en pantalla para depuración limpia
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-// 2. Iniciar la sesión de forma global para todo el sistema
+// 2. Iniciar la sesión de forma global para todo el restaurante
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// 3. Importar los controladores necesarios de forma absoluta
+// 3. Importar los controladores y utilidades necesarias de forma absoluta
 require_once __DIR__ . '/controllers/UsuarioController.php';
 
-// 4. Capturar la acción que solicita el usuario (por defecto va al login)
+// 4. Capturar la acción de vista que solicita el usuario (por defecto va al login)
 $vista = $_GET['v'] ?? 'login';
 
 // 5. Instanciar el controlador de usuarios para verificar el estado del sistema
 $usuarioCtrl = new UsuarioController();
 
-// 6. Enrutamiento lógico del sistema
+// 6. Enrutamiento lógico centralizado por bloques con discriminación de roles
 switch ($vista) {
+
     case 'login':
         if (isset($_SESSION['usuario_id']) && !$usuarioCtrl->esSistemaNuevo()) {
             header('Location: index.php?v=catalogo');
@@ -58,129 +59,120 @@ switch ($vista) {
         }
         require_once __DIR__ . '/views/dashboard.php';
         break;
-            case 'config_empresa':
-        // Protección extra por código: rebotar si no es Superadmin (1)
-        if (!isset($_SESSION['usuario_id']) || (int)$_SESSION['rol_id'] !== 1) {
-            header('Location: index.php?v=dashboard');
-            exit;
-        }
-        require_once __DIR__ . '/views/config_empresa.php';
-        break;
+    // ============================================================================
+    // ⚙️ MÓDULOS CRÍTICOS DEL NÚCLEO: ACCESO EXCLUSIVO PARA SUPERADMIN (1) Y ADMIN (2)
+    // El Supervisor (Rol 3) es rebotado automáticamente con alerta destructiva.
+    // ============================================================================
 
-
-    case 'usuarios':
-        if (!isset($_SESSION['usuario_id'])) {
+    case 'config_empresa':
+    case 'configuracion':
+        if (!isset($_SESSION['usuario_id']) || !isset($_SESSION['rol_id'])) {
             header('Location: index.php?v=login');
             exit;
         }
-        // USAR __DIR__ AQUÍ ES CRUCIAL PARA REQUERIR LA VISTA DESDE LA RAÍZ
+        
+        // 🌟 CANDADO INDUSTRIAL: Si el rol es igual o mayor a 3 (Supervisor, Mesero, etc.), bloqueamos
+        if ((int)$_SESSION['rol_id'] >= 3) {
+            header('Location: index.php?v=dashboard&error=' . urlencode('Acceso Restringido: El rol de Supervisor no posee privilegios para modificar la configuración del sistema.'));
+            exit;
+        }
+        
+        $vista_archivo = ($vista === 'config_empresa') ? 'config_empresa.php' : 'configuracion.php';
+        require_once __DIR__ . '/views/' . $vista_archivo;
+        break;
+
+    case 'usuarios':
+    case 'gestion_usuarios':
+        if (!isset($_SESSION['usuario_id']) || !isset($_SESSION['rol_id'])) {
+            header('Location: index.php?v=login');
+            exit;
+        }
+        
+        // El personal de soporte y el admin administran usuarios, el supervisor queda fuera por seguridad
+        if ((int)$_SESSION['rol_id'] >= 3) {
+            header('Location: index.php?v=dashboard&error=' . urlencode('Acceso Restringido: Gestión de personal exclusiva para Administradores.'));
+            exit;
+        }
+        
+        $vista_usuario = ($vista === 'usuarios') ? 'usuarios.php' : 'gestion_usuarios.php';
         require_once __DIR__ . '/views/usuarios.php';
         break;
-        // Dentro del switch ($vista) de tu index.php:
-case 'gestion_usuarios':
-    if (!isset($_SESSION['usuario_id'])) {
-        header('Location: index.php?v=login');
-        exit;
-    }
-       // Dentro del switch ($vista) de tu index.php:
 
-    // Caso 1: La nueva tabla paginada con buscadores
-    case 'mantenimiento_productos':
-        if (!isset($_SESSION['usuario_id']) || ((int)$_SESSION['rol_id'] !== 1 && (int)$_SESSION['rol_id'] !== 2)) {
-            header('Location: index.php?v=dashboard'); exit;
-        }
-        require_once __DIR__ . '/views/lista-productos.php'; // <-- Apunta a la nueva lista
-        break;
 
-    // Caso 2: El formulario limpio (que antes tenías a la izquierda) ahora en pantalla completa
-    case 'mantenimiento_productos_nuevo':
-        if (!isset($_SESSION['usuario_id']) || ((int)$_SESSION['rol_id'] !== 1 && (int)$_SESSION['rol_id'] !== 2)) {
-            header('Location: index.php?v=dashboard'); exit;
-        }
-        require_once __DIR__ . '/views/productos.php'; // <-- Apunta al formulario
-        break;
-// ============================================================================
-    // 🗂️ NUEVA RUTA: MANTENIMIENTO DE CATEGORÍAS DEL MENÚ
     // ============================================================================
+    // 🍕 MÓDULOS OPERATIVOS: ACCESO COMBINADO PARA SUPERADMIN (1), ADMIN (2) Y SUPERVISOR (3)
+    // ============================================================================
+
+    case 'mantenimiento_productos':
+    case 'mantenimiento_productos_nuevo':
     case 'mantenimiento_categorias':
-        // 1. Verificación de sesión: Si no está logueado, lo rebota al login ordinario
+    case 'mantenimiento_areas':
+    case 'mantenimiento_mesas':
         if (!isset($_SESSION['usuario_id']) || !isset($_SESSION['rol_id'])) {
             header('Location: index.php?v=login');
             exit;
         }
 
-        // 2. Filtro de jerarquía: Solo Superadmin (1) o Admin (2) gestionan las categorías
+        // 🚀 PERMISO SEGURO: Permitimos el paso si el ID es 1, 2 o 3 (Tu Supervisor está incluido).
         $rolSesion = (int)$_SESSION['rol_id'];
-        if ($rolSesion !== 1 && $rolSesion !== 2) {
+        if ($rolSesion !== 1 && $rolSesion !== 2 && $rolSesion !== 3) {
             header('Location: index.php?v=dashboard');
             exit;
         }
 
-        // 3. Cargamos de forma segura el archivo físico de la vista
-        require_once __DIR__ . '/views/categorias.php';
+        // Enrutamos de forma dinámica al archivo físico correspondiente
+        if ($vista === 'mantenimiento_productos') require_once __DIR__ . '/views/lista-productos.php';
+        elseif ($vista === 'mantenimiento_productos_nuevo') require_once __DIR__ . '/views/productos.php';
+        elseif ($vista === 'mantenimiento_categories' || $vista === 'mantenimiento_categorias') require_once __DIR__ . '/views/categorias.php';
+        elseif ($vista === 'mantenimiento_areas') require_once __DIR__ . '/views/areas.php';
+        elseif ($vista === 'mantenimiento_mesas') require_once __DIR__ . '/views/mesas.php';
         break;
-            // Dentro del switch ($vista) de tu index.php:
-    
-    case 'mantenimiento_areas':
-        if (!isset($_SESSION['usuario_id']) || ((int)$_SESSION['rol_id'] !== 1 && (int)$_SESSION['rol_id'] !== 2)) {
-            header('Location: index.php?v=dashboard'); exit;
-        }
-        require_once __DIR__ . '/views/areas.php';
-        break;
+    // ============================================================================
+    // 🍳 PANTALLAS DE PRODUCCIÓN KDS: ACCESO LIBRE SEGÚN ESTACIÓN
+    // ============================================================================
 
-    case 'mantenimiento_mesas':
-        if (!isset($_SESSION['usuario_id']) || ((int)$_SESSION['rol_id'] !== 1 && (int)$_SESSION['rol_id'] !== 2)) {
-            header('Location: index.php?v=dashboard'); exit;
-        }
-        require_once __DIR__ . '/views/mesas.php';
-        break;
-
-
-         // Añade estos nuevos casos dentro del switch de tu index.php central:
     case 'cocina':
-        if (!isset($_SESSION['usuario_id'])) { header('Location: index.php?v=login'); exit; }
-        require_once __DIR__ . '/views/cocina.php';
-        break;
     case 'horno':
-        if (!isset($_SESSION['usuario_id'])) { header('Location: index.php?v=login'); exit; }
-        require_once __DIR__ . '/views/horno.php';
-        break;
     case 'bar':
-        if (!isset($_SESSION['usuario_id'])) { header('Location: index.php?v=login'); exit; }
-        require_once __DIR__ . '/views/bar.php';
+        if (!isset($_SESSION['usuario_id'])) { 
+            header('Location: index.php?v=login'); 
+            exit; 
+        }
+        
+        if ($vista === 'cocina') require_once __DIR__ . '/views/cocina.php';
+        elseif ($vista === 'horno') require_once __DIR__ . '/views/horno.php';
+        elseif ($vista === 'bar') require_once __DIR__ . '/views/bar.php';
         break;
-  // REEMPLAZA ESOS DOS CASOS EN TU index.php POR ESTA CONFIGURACIÓN LIMPIA:
 
-    // 🪑 1. EL MAPA DEL SALÓN (Para los meseros: botones de colores, comandas y liberación)
+
+    // ============================================================================
+    // 🪑 FLUX DE SALÓN Y VENTAS: EL MAPA DEL SALÓN Y EL CIRCUITO DE REAPERTURA
+    // ============================================================================
+
     case 'mesas':
         if (!isset($_SESSION['usuario_id'])) { 
             header('Location: index.php?v=login'); 
             exit; 
         }
-        // Apunta exclusivamente al plano gráfico táctil
+        // Apunta exclusivamente al plano gráfico táctil de los salones
         require_once __DIR__ . '/views/mesas_salon.php';
         break;
-        // ============================================================================
-    // 🍕 RUTA CENTRAL DE VENTAS: CATÁLOGO TÁCTIL Y LEVANTAMIENTO DE PEDIDOS
-    // ============================================================================
+
     case 'tomar_pedido':
-        // 1. Verificación de sesión ordinaria: Si no está logueado, lo rebota al login
         if (!isset($_SESSION['usuario_id'])) {
             header('Location: index.php?v=login');
             exit;
         }
-
-        // 2. Filtro de seguridad por ID de Comanda: Evita entrar a pantallas de facturación vacías
+        
+        // Filtro de seguridad por ID de Comanda: Evita entrar a pantallas vacías
         $pedido_id = isset($_GET['pedido_id']) ? intval($_GET['pedido_id']) : 0;
         if ($pedido_id <= 0) {
             header('Location: index.php?v=mesas&error=' . urlencode('Seleccione una mesa o abra una comanda válida.'));
             exit;
         }
-
-        // 3. Cargamos de forma segura el archivo físico de la vista
+        
         require_once __DIR__ . '/views/tomar_pedido.php';
         break;
-       // Busca el 'case abrir_comanda' en tu index.php y reemplázalo por esta lógica directa:
 
     case 'abrir_comanda':
         if (!isset($_SESSION['usuario_id'])) { 
@@ -188,21 +180,39 @@ case 'gestion_usuarios':
             exit; 
         }
 
-        // Captura directa de datos desde el mapa de mesas o botones superiores
-        $mesa_id     = isset($_GET['mesa_id']) ? intval($_GET['mesa_id']) : 0;
-        $tipo_pedido = isset($_GET['tipo_pedido']) ? trim($_GET['tipo_pedido']) : 'local';
-        $monto_envio = isset($_GET['monto_envio']) ? floatval($_GET['monto_envio']) : 0.00;
-        $usuario_id  = (int)$_SESSION['usuario_id'];
+        $mesa_id       = isset($_GET['mesa_id']) ? intval($_GET['mesa_id']) : 0;
+        $tipo_pedido   = isset($_GET['tipo_pedido']) ? trim($_GET['tipo_pedido']) : 'local';
+        $monto_envio   = isset($_GET['monto_envio']) ? floatval($_GET['monto_envio']) : 0.00;
+        $usuario_id    = (int)$_SESSION['usuario_id'];
         $caja_turno_id = isset($_SESSION['caja_turno_id']) ? (int)$_SESSION['caja_turno_id'] : null;
 
-        // Invocamos al modelo para insertar la comanda en silencio en MySQL
+        // 🌟 CANDADO DE RECUPERACIÓN AUTOMÁTICA: Si es Consumo Local y la mesa física ya está ocupada
+        if ($tipo_pedido === 'local' && $mesa_id > 0) {
+            $db_check = (new Conexion())->conectar();
+            
+            // Buscamos si posee una comanda abierta en estado borrador/pendiente
+            $stmtCheck = $db_check->prepare("SELECT id FROM pedidos WHERE mesa_id = :mesa_id AND estado = 'pendiente' LIMIT 1");
+            $stmtCheck->execute(['mesa_id' => $mesa_id]);
+            $pedidoExistente = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+
+            if ($pedidoExistente) {
+                $id_pedido_activo = (int)$pedidoExistente['id'];
+                
+                // Forzamos la persistencia del estado en el plano
+                $db_check->prepare("UPDATE mesas SET estado = 'ocupada' WHERE id = :id")->execute(['id' => $mesa_id]);
+                
+                header("Location: index.php?v=tomar_pedido&pedido_id=" . $id_pedido_activo);
+                exit;
+            }
+        }
+
+        // ➕ CREACIÓN LIMPIA: Si es una mesa libre o un despacho express
         require_once __DIR__ . '/models/PedidoModelo.php';
         $pedidoModelo = new PedidoModelo();
         
         $pedido_id = $pedidoModelo->abrirNuevaComanda($usuario_id, $caja_turno_id, $mesa_id, $tipo_pedido, $monto_envio);
         
         if ($pedido_id) {
-            // 🚀 REDIRECCIÓN INSTANTÁNEA: Entra directo a levantar el pedido al Punto de Venta
             header("Location: index.php?v=tomar_pedido&pedido_id=" . $pedido_id);
             exit;
         } else {
@@ -210,15 +220,23 @@ case 'gestion_usuarios':
             exit;
         }
         break;
+    case 'kds_monitor':
+        if (!isset($_SESSION['usuario_id'])) { header('Location: index.php?v=login'); exit; }
+        require_once __DIR__ . '/views/kds_monitor.php';
+        break;
 
 
-   
-
+    // ============================================================================
+    // 🔕 CIERRE DEL ENRUTADOR: MANEJO DE EXCEPCIONES 404
+    // ============================================================================
 
     default:
         http_response_code(404);
-        echo "<h1>404 - Página no encontrada en Jungle Pizza</h1>";
-        echo "<a href='index.php'>Volver al inicio</a>";
+        echo "<div style='font-family:sans-serif; text-align:center; padding:50px; color:#1b4332;'>";
+        echo "<h1 style='font-size:40px; margin-bottom:10px;'>🦁 404 - Página no encontrada</h1>";
+        echo "<p style='color:#666; margin-bottom:20px;'>La sección solicitada no existe en el ecosistema de Jungle Pizza.</p>";
+        echo "<a href='index.php?v=mesas' style='background:#1b4332; color:#fff; padding:10px 20px; border-radius:6px; text-decoration:none; font-weight:bold;'>Volver al Plano de Salones</a>";
+        echo "</div>";
         break;
 }
 ?>

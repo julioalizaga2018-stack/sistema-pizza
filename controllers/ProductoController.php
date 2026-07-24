@@ -45,9 +45,13 @@ class ProductoController {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $accion = $_POST['accion'] ?? '';
 
-            if ($accion === 'crear_producto' || $accion === 'editar_producto') {
+                        if ($accion === 'crear_producto' || $accion === 'editar_producto') {
                 $id             = intval($_POST['id'] ?? 0);
                 $categoria_id   = intval($_POST['categoria_id'] ?? 0);
+                
+                // 🌟 CORRECCIÓN CRÍTICA: Capturamos el ENUM del área de producción de la vista
+                $area_produccion = trim($_POST['area_produccion'] ?? 'cocina');
+                
                 $nombre         = trim($_POST['nombre'] ?? '');
                 $descripcion    = trim($_POST['descripcion'] ?? '');
                 $precio_costo   = floatval($_POST['precio_costo'] ?? 0);
@@ -66,7 +70,7 @@ class ProductoController {
                     return ['status' => 'error', 'msg' => 'Por favor, rellene los campos obligatorios correctamente.', 'origen' => 'productos'];
                 }
 
-                // 📸 PROCESAMIENTO SEGURO Y AUTOMÁTICO DE LA FOTOGRAFÍA
+                // 📸 PROCESAMIENTO SEGURO Y AUTOMÁTICO DE LA FOTOGRAFÍA (Tu código original intacto)
                 if (isset($_FILES['imagen']) && $_FILES['imagen']['error'] === UPLOAD_ERR_OK) {
                     $fileTmpPath = $_FILES['imagen']['tmp_name'];
                     $fileName    = $_FILES['imagen']['name'];
@@ -97,18 +101,22 @@ class ProductoController {
                         return ['status' => 'error', 'msg' => 'Error al mover la fotografía al servidor.', 'origen' => 'productos'];
                     }
                 }
-                // Enrutamiento final hacia los métodos del modelo según la acción indicada
+                
+                // Enrutamiento final original con inyección perfecta de parámetros
                 if ($accion === 'crear_producto') {
-                    if ($this->modelo->registrarProducto($categoria_id, $nombre, $descripcion, $precio_costo, $precio_base, $unidad_medida, $maneja_stock, $stock_actual, $stock_minimo, $es_extra, $es_sabor_pizza, $nombre_imagen)) {
+                    // 🌟 MODIFICADO: $area_produccion viaja en la tercera posición exacta
+                    if ($this->modelo->registrarProducto($categoria_id, $nombre, $area_produccion, $descripcion, $precio_costo, $precio_base, $unidad_medida, $maneja_stock, $stock_actual, $stock_minimo, $es_extra, $es_sabor_pizza, $nombre_imagen)) {
                         return ['status' => 'success', 'msg' => 'Producto añadido con éxito.', 'origen' => 'productos'];
                     }
                 } else if ($accion === 'editar_producto' && $id > 0) {
-                    if ($this->modelo->actualizarProducto($id, $categoria_id, $nombre, $descripcion, $precio_costo, $precio_base, $unidad_medida, $maneja_stock, $stock_actual, $stock_minimo, $es_extra, $es_sabor_pizza, $nombre_imagen)) {
+                    // 🌟 MODIFICADO: $area_produccion viaja en la cuarta posición exacta
+                    if ($this->modelo->actualizarProducto($id, $categoria_id, $nombre, $area_produccion, $descripcion, $precio_costo, $precio_base, $unidad_medida, $maneja_stock, $stock_actual, $stock_minimo, $es_extra, $es_sabor_pizza, $nombre_imagen)) {
                         return ['status' => 'success', 'msg' => 'Producto actualizado con éxito.', 'origen' => 'productos'];
                     }
                 }
                 return ['status' => 'error', 'msg' => 'No se pudieron salvar los cambios en el menú.', 'origen' => 'productos'];
             }
+
         }
         return null;
     }

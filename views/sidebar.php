@@ -38,39 +38,44 @@ if (!defined('URL_BASE')) {
             <?php endif; ?>
         </div>
 
-        <ul class="nav-list">
-            <li>
-                <a href="<?php echo URL_BASE; ?>index.php?v=dashboard" class="nav-link <?php echo ($vista_actual == 'dashboard') ? 'active' : ''; ?>">📊 Dashboard</a>
-            </li>
-            <li>
-                <a href="<?php echo URL_BASE; ?>index.php?v=cocina" class="nav-link <?php echo ($vista_actual == 'cocina') ? 'active' : ''; ?>">🍳 Cocina</a>
-            </li>
-            <li>
-                <a href="<?php echo URL_BASE; ?>index.php?v=horno" class="nav-link <?php echo ($vista_actual == 'horno') ? 'active' : ''; ?>">🔥 Horno</a>
-            </li>
-            <li>
-                <a href="<?php echo URL_BASE; ?>index.php?v=bar" class="nav-link <?php echo ($vista_actual == 'bar') ? 'active' : ''; ?>">🍹 Bar</a>
-            </li>
-            <li>
-                <a href="<?php echo URL_BASE; ?>index.php?v=mesas" class="nav-link <?php echo ($vista_actual == 'mesas') ? 'active' : ''; ?>">🪑 Mapa de Mesas</a>
-            </li>
+       <ul class="nav-list">
+    <li>
+        <a href="<?php echo URL_BASE; ?>index.php?v=dashboard" class="nav-link <?php echo ($vista_actual == 'dashboard') ? 'active' : ''; ?>">📊 Dashboard</a>
+    </li>
+    
+    <!-- 🌟 SECCIÓN CENTRALIZADA KDS: Apunta a tu nuevo kds_monitor dinámico -->
+    <li>
+        <a href="<?php echo URL_BASE; ?>index.php?v=kds_monitor&estacion=cocina" class="nav-link <?php echo ($vista_actual == 'kds_monitor' && ($_GET['estacion'] ?? '') === 'cocina') ? 'active' : ''; ?>">🍳 Cocina</a>
+    </li>
+    <li>
+        <a href="<?php echo URL_BASE; ?>index.php?v=kds_monitor&estacion=horno" class="nav-link <?php echo ($vista_actual == 'kds_monitor' && ($_GET['estacion'] ?? '') === 'horno') ? 'active' : ''; ?>">🔥 Horno</a>
+    </li>
+    <li>
+        <a href="<?php echo URL_BASE; ?>index.php?v=kds_monitor&estacion=bar" class="nav-link <?php echo ($vista_actual == 'kds_monitor' && ($_GET['estacion'] ?? '') === 'bar') ? 'active' : ''; ?>">🍹 Bar</a>
+    </li>
+    
+    <li>
+        <a href="<?php echo URL_BASE; ?>index.php?v=mesas" class="nav-link <?php echo ($vista_actual == 'mesas') ? 'active' : ''; ?>">🪑 Mapa de Mesas</a>
+    </li>
 
-            <!-- 🛠️ NUEVOS ENLACES FIJOS DE MANTENIMIENTO (Solo visibles para Superadmin y Admin) -->
-            <?php if ($rolUsuario === 1 || $rolUsuario === 2): ?>
-                <li style="margin-top: 15px; padding-left: 15px; font-size: 11px; text-transform: uppercase; color: #888; font-weight: bold; letter-spacing: 1px;">🛠️ Catálogos</li>
-                <li>
-                    <a href="<?php echo URL_BASE; ?>index.php?v=mantenimiento_productos" class="nav-link <?php echo ($vista_actual == 'mantenimiento_productos') ? 'active' : ''; ?>">📦 Menú y Productos</a>
-                </li>
-                <li>
-                    <a href="<?php echo URL_BASE; ?>index.php?v=mantenimiento_mesas" class="nav-link <?php echo ($vista_actual == 'mantenimiento_mesas') ? 'active' : ''; ?>">🪑 Gestión Mesas</a>
-                </li>
-                <li>
-                    <a href="<?php echo URL_BASE; ?>index.php?v=mantenimiento_areas" class="nav-link <?php echo ($vista_actual == 'mantenimiento_areas') ? 'active' : ''; ?>">🗺️ Gestión Áreas</a>
-                </li>
-                <li>
-                    <a href="<?php echo URL_BASE; ?>index.php?v=mantenimiento_categorias" class="nav-link <?php echo ($vista_actual == 'mantenimiento_categorias') ? 'active' : ''; ?>">🗂️ Categorías</a>
-                </li>
-            <?php endif; ?>
+    <!-- 🛠️ ENLACES DE MANTENIMIENTO: Sincronizados con tu variable numéricas de phpMyAdmin -->
+    <?php if ((int)$rolUsuario === 1 || (int)$rolUsuario === 2 || (int)$rolUsuario === 3): ?>
+        <li style="margin-top: 15px; padding-left: 15px; font-size: 11px; text-transform: uppercase; color: #888; font-weight: bold; letter-spacing: 1px;">🛠️ Catálogos</li>
+        <li>
+            <a href="<?php echo URL_BASE; ?>index.php?v=mantenimiento_productos" class="nav-link <?php echo ($vista_actual == 'mantenimiento_productos' || $vista_actual == 'mantenimiento_productos_nuevo') ? 'active' : ''; ?>">📦 Menú y Productos</a>
+        </li>
+        <li>
+            <a href="<?php echo URL_BASE; ?>index.php?v=mantenimiento_mesas" class="nav-link <?php echo ($vista_actual == 'mantenimiento_mesas') ? 'active' : ''; ?>">🪑 Gestión Mesas</a>
+        </li>
+        <li>
+            <a href="<?php echo URL_BASE; ?>index.php?v=mantenimiento_areas" class="nav-link <?php echo ($vista_actual == 'mantenimiento_areas') ? 'active' : ''; ?>">🗺️ Gestión Áreas</a>
+        </li>
+        <li>
+            <a href="<?php echo URL_BASE; ?>index.php?v=mantenimiento_categorias" class="nav-link <?php echo ($vista_actual == 'mantenimiento_categorias') ? 'active' : ''; ?>">🗂️ Categorías</a>
+        </li>
+    <?php endif; ?>
+</ul>
+
             <!-- ⚙️ TU SECCIÓN DE CONFIGURACIÓN ORIGINAL INTACTA (Solo Superadmin y Admin) -->
             <?php if ($rolUsuario === 1 || $rolUsuario === 2): ?>
                 <li class="dropdown-container" style="margin-top: 15px;">
@@ -82,7 +87,7 @@ if (!defined('URL_BASE')) {
                     
                     <ul class="submenu" id="config-submenu">
                         <li><a href="#perfil" class="submenu-link">👤 Mi Perfil</a></li>
-                        <?php if ($rolUsuario === 1): ?>
+                        <?php if ($rolUsuario === 1 || $rolUsuario === 2): ?>
                             <li><a href="<?php echo URL_BASE; ?>index.php?v=config_empresa" class="submenu-link <?php echo ($vista_actual == 'config_empresa') ? 'active' : ''; ?>">🏢 Empresa</a></li>
                         <?php endif; ?>
                         <li><a href="<?php echo URL_BASE; ?>index.php?v=gestion_usuarios" class="submenu-link <?php echo ($vista_actual == 'gestion_usuarios') ? 'active' : ''; ?>">👥 Usuarios</a></li>

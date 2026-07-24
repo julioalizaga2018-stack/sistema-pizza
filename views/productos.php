@@ -27,17 +27,19 @@ $msg_success = $_GET['success'] ?? null;
 ?>
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Mantenimiento de Catálogo - Jungle Pizza</title>
-    
+
     <!-- Enlace a tus hojas de estilo globales -->
     <link rel="stylesheet" href="<?php echo URL_BASE; ?>public/css/base.css">
     <link rel="stylesheet" href="<?php echo URL_BASE; ?>public/css/estilos.css">
     <!-- Enlace a tu nueva hoja de estilos aislada con versión dinámica -->
     <link rel="stylesheet" href="<?php echo URL_BASE; ?>public/css/productos.css?v=1.2">
 </head>
+
 <body>
     <!-- Cabecera Mobile original intacta -->
     <header class="mobile-header">
@@ -53,17 +55,17 @@ $msg_success = $_GET['success'] ?? null;
         <main class="main-content">
             <h2>Mantenimiento de Menú y Productos</h2>
             <p style="color: #666; margin-bottom: 20px;">Configura las especialidades, bebidas, mermas y modificadores del sistema.</p>
-            
+
             <!-- Bloque de Notificaciones de URL (Mensajes del Controlador) -->
             <?php if ($msg_error): ?><div class="alert alert-error">⚠️ <?php echo htmlspecialchars($msg_error); ?></div><?php endif; ?>
             <?php if ($msg_success): ?><div class="alert alert-success">✅ <?php echo htmlspecialchars($msg_success); ?></div><?php endif; ?>
 
             <div class="productos-grid">
-                
+
                 <!-- COLUMNA 1: FORMULARIO CRUD (REGISTRO / EDICIÓN) -->
                 <div class="product-card">
                     <h3><?php echo $productoEditar ? '✏️ Modificar Producto' : '➕ Registrar Alimento / Insumo'; ?></h3>
-                    
+
                     <!-- Formulario multiparte preparado para la carga de archivos -->
                     <form action="<?php echo URL_BASE; ?>controllers/ProductoController.php" method="POST" enctype="multipart/form-data" style="margin-top: 15px;">
                         <input type="hidden" name="accion" value="<?php echo $productoEditar ? 'editar_producto' : 'crear_producto'; ?>">
@@ -93,6 +95,18 @@ $msg_success = $_GET['success'] ?? null;
                                 <input type="text" name="unidad_medida" class="form-control" value="<?php echo htmlspecialchars($productoEditar['unidad_medida'] ?? 'Unidad'); ?>" required placeholder="Ej. Unidad, Porción">
                             </div>
                         </div>
+                        <!-- 🌟 Selector B: El nuevo campo inteligente de Área de Producción Directa (Destino KDS) -->
+                        <div>
+                            <label style="display:block; margin-bottom:5px; font-weight:600; font-size:14px; color:var(--verde-oscuro);">Área de Producción *</label>
+                            <select name="area_produccion" class="form-control" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                                <option value="horno" <?php echo ($productoEditar && $productoEditar['area_produccion'] === 'horno') ? 'selected' : ''; ?>>🔥 Horno de Pizzas</option>
+                                <option value="cocina" <?php echo (!$productoEditar || ($productoEditar && $productoEditar['area_produccion'] === 'cocina')) ? 'selected' : ''; ?>>🍳 Cocina Central (Freidoras)</option>
+                                <option value="bar" <?php echo ($productoEditar && $productoEditar['area_produccion'] === 'bar') ? 'selected' : ''; ?>>🍹 Bar / Estación de Bebidas</option>
+                                <option value="despacho" <?php echo ($productoEditar && $productoEditar['area_produccion'] === 'despacho') ? 'selected' : ''; ?>>📦 Despacho (Heladera Gaseosas)</option>
+                            </select>
+
+                        </div>
+
                         <!-- Fila 3: Control Financiero Avanzado (Precios de Costo y Venta) -->
                         <div class="form-row-grid">
                             <div>
@@ -180,7 +194,9 @@ $msg_success = $_GET['success'] ?? null;
                             </thead>
                             <tbody>
                                 <?php if (empty($productos)): ?>
-                                    <tr><td colspan="5" style="text-align: center; color: #999; padding: 25px;">No hay productos registrados en el menú todavía.</td></tr>
+                                    <tr>
+                                        <td colspan="5" style="text-align: center; color: #999; padding: 25px;">No hay productos registrados en el menú todavía.</td>
+                                    </tr>
                                 <?php else: ?>
                                     <?php foreach ($productos as $p): ?>
                                         <tr>
@@ -192,19 +208,59 @@ $msg_success = $_GET['success'] ?? null;
                                                     <div style="width:50px; height:50px; background:#e2e8f0; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px;">🍕🍕</div>
                                                 <?php endif; ?>
                                             </td>
-                                            
-                                            <!-- Nombre Comercial y Categoría -->
+
+                                            <!-- 🚀 REEMPLÁZALA EXACTAMENTE POR ESTA (Añade el Badge dinámico de Área de Producción): -->
                                             <td>
-                                                <strong style="color:var(--verde-oscuro); display:block; font-size:15px;"><?php echo htmlspecialchars($p['nombre']); ?></strong>
-                                                <span style="font-size:11px; text-transform:uppercase; font-weight:bold; color:#777; background:#f1f5f9; padding:2px 6px; border-radius:4px;"><?php echo htmlspecialchars($p['nombre_categoria']); ?></span>
+                                                <strong style="color:var(--verde-oscuro); display:block; font-size:15px; margin-bottom: 4px;"><?php echo htmlspecialchars($p['nombre']); ?></strong>
+
+                                                <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+                                                    <!-- Badge 1: Clasificación Comercial (Tu badge original intacto) -->
+                                                    <span style="font-size:11px; text-transform:uppercase; font-weight:bold; color:#475569; background:#e2e8f0; padding:2px 6px; border-radius:4px;">
+                                                        <?php echo htmlspecialchars($p['nombre_categoria']); ?>
+                                                    </span>
+
+                                                    <!-- 🌟 Badge 2: Área de Producción Directa (Destino KDS) -->
+                                                    <?php
+                                                    $badge_color = "#475569";
+                                                    $badge_bg = "#f1f5f9";
+                                                    $badge_text = "Desconocido";
+                                                    if (isset($p['area_produccion'])) {
+                                                        switch ($p['area_produccion']) {
+                                                            case 'horno':
+                                                                $badge_bg = "#fff4e6";
+                                                                $badge_color = "#d9480f";
+                                                                $badge_text = "🔥 Horno";
+                                                                break;
+                                                            case 'cocina':
+                                                                $badge_bg = "#ebfbee";
+                                                                $badge_color = "#2b8a3e";
+                                                                $badge_text = "🍳 Cocina";
+                                                                break;
+                                                            case 'bar':
+                                                                $badge_bg = "#e3f2fd";
+                                                                $badge_color = "#0d47a1";
+                                                                $badge_text = "🍹 Bar";
+                                                                break;
+                                                            case 'despacho':
+                                                                $badge_bg = "#f3f0ff";
+                                                                $badge_color = "#5f3dc4";
+                                                                $badge_text = "📦 Despacho";
+                                                                break;
+                                                        }
+                                                    }
+                                                    ?>
+                                                    <span style="font-size:11px; text-transform:uppercase; font-weight:bold; color: <?php echo $badge_color; ?>; background: <?php echo $badge_bg; ?>; padding:2px 6px; border-radius:4px; display: inline-flex; align-items: center;">
+                                                        <?php echo $badge_text; ?>
+                                                    </span>
+                                                </div>
                                             </td>
-                                            
+
                                             <!-- Control Financiero de Precios -->
                                             <td>
                                                 <span style="font-size:12px; color:#777; display:block;">Costo: C$ <?php echo number_format($p['precio_costo'], 2); ?></span>
                                                 <strong style="color:var(--naranja-pizza); font-size:14px;">Venta: C$ <?php echo number_format($p['precio_base'], 2); ?></strong>
                                             </td>
-                                            
+
                                             <!-- Stock Dinámico con Insignias Inteligentes -->
                                             <td>
                                                 <?php if ((int)$p['maneja_stock'] === 0): ?>
@@ -216,11 +272,11 @@ $msg_success = $_GET['success'] ?? null;
                                                         <span class="stock-badge stock-ok">✅ <?php echo floatval($p['stock_actual']); ?> <?php echo htmlspecialchars($p['unidad_medida']); ?></span>
                                                     <?php endif; ?>
                                                 <?php endif; ?>
-                                                
+
                                                 <?php if ((int)$p['es_extra'] === 1): ?><span style="display:inline-block; font-size:9px; background:#fff3cd; color:#856404; padding:1px 4px; border-radius:3px; margin-left:2px; font-weight:bold;">EXTRA</span><?php endif; ?>
                                                 <?php if ((int)$p['es_sabor_pizza'] === 1): ?><span style="display:inline-block; font-size:9px; background:#e3f2fd; color:#0d47a1; padding:1px 4px; border-radius:3px; margin-left:2px; font-weight:bold;">MIXTO</span><?php endif; ?>
                                             </td>
-                                            
+
                                             <!-- Botones de Control de Fila -->
                                             <td style="white-space: nowrap;">
                                                 <a href="index.php?v=mantenimiento_productos&edit_id=<?php echo $p['id']; ?>" class="btn-action btn-edit" style="padding:8px 12px; margin-right:3px;">Editar</a>
@@ -243,9 +299,9 @@ $msg_success = $_GET['success'] ?? null;
             const container = document.getElementById('inventario-inputs-box');
             const actualInput = document.getElementById('stock_actual');
             const minimoInput = document.getElementById('stock_minimo');
-            
+
             if (!container || !actualInput || !minimoInput) return;
-            
+
             if (checked) {
                 container.style.opacity = '1';
                 container.style.pointerEvents = 'auto';
@@ -260,7 +316,7 @@ $msg_success = $_GET['success'] ?? null;
                 minimoInput.value = '0.00';
             }
         }
-        
+
         // Ejecución inmediata al cargar para validar el estado si estamos editando
         document.addEventListener("DOMContentLoaded", function() {
             const checkbox = document.getElementById('maneja_stock');
@@ -269,4 +325,5 @@ $msg_success = $_GET['success'] ?? null;
     </script>
     <script src="<?php echo URL_BASE; ?>public/js/main.js"></script>
 </body>
+
 </html>

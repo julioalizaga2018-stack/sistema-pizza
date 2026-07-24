@@ -186,6 +186,21 @@ class PedidoController {
                     exit;
                 }
             }
+                                    // 🌟 NUEVA ACCIÓN KDS: Intercepta el botón verde de "Enviar Orden" desde el Punto de Venta
+            if ($accion === 'comandar_orden_kds') {
+                $pedido_id = intval($_POST['pedido_id'] ?? 0);
+
+                if ($pedido_id > 0) {
+                    $exito = $this->modelo->enviarPedidoAProduccion($pedido_id);
+                    if ($exito) {
+                        return ['status' => 'success', 'msg' => '¡Comanda enviada a producción con éxito!', 'origen' => 'tomar_pedido'];
+                    } else {
+                        return ['status' => 'error', 'msg' => 'No hay productos nuevos en borrador para enviar a las cocinas.', 'origen' => 'tomar_pedido'];
+                    }
+                }
+                return ['status' => 'error', 'msg' => 'ID de comanda inválido.', 'origen' => 'tomar_pedido'];
+            }
+
 
 
         }

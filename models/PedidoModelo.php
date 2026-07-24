@@ -158,6 +158,36 @@ class PedidoModelo extends Conexion {
             'producto_id'       => $sabor_2_id
         ]);
     }
+                /**
+     * 🚀 ENVIAR ORDEN (MESERO): Mueve los borradores de 'solicitado' a 'pendiente' (Cola KDS)
+     */
+    public function enviarPedidoAProduccion($pedido_id) {
+        try {
+            $this->db->beginTransaction();
+
+            // Pasamos masivamente de borrador a la cola de espera de cocina
+            $sqlItems = "UPDATE pedido_detalles 
+                         SET estado = 'pendiente' 
+                         WHERE pedido_id = :pedido_id AND estado = 'solicitado'";
+            
+            $stmtItems = $this->db->prepare($sqlItems);
+            $stmtItems->execute(['pedido_id' => intval($pedido_id)]);
+
+            // Congelamos las finanzas en la cabecera ignorando las cancelaciones
+            $sqlHeader = "UPDATE pedidos 
+                          SET total = COALESCE((SELECT SUM(subtotal) FROM pedido_detalles WHERE pedido_id = :pedido_id AND estado NOT IN ('quitado_antes', 'quitado_despues')), 0),
+                              updated_at = NOW() 
+                          WHERE id = :pedido_id";
+            $stmtHeader = $this->db->prepare($sqlHeader);
+            $stmtHeader->execute(['pedido_id' => intval($pedido_id)]);
+
+            $this->db->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            return false;
+        }
+    }
 
 
 }

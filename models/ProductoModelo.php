@@ -35,56 +35,61 @@ class ProductoModelo extends Conexion {
         return $stmt->fetch();
     }
 
-    // CREAR: Inserta un nuevo producto al catálogo maestro con su imagen
-    public function registrarProducto($categoria_id, $nombre, $descripcion, $precio_costo, $precio_base, $unidad_medida, $maneja_stock, $stock_actual, $stock_minimo, $es_extra, $es_sabor_pizza, $imagen) {
-        $sql = "INSERT INTO productos (categoria_id, nombre, descripcion, precio_costo, precio_base, unidad_medida, maneja_stock, stock_actual, stock_minimo, es_extra, es_sabor_pizza, imagen) 
-                VALUES (:categoria_id, :nombre, :descripcion, :precio_costo, :precio_base, :unidad_medida, :maneja_stock, :stock_actual, :stock_minimo, :es_extra, :es_sabor_pizza, :imagen)";
+      // CREAR: Inserta un nuevo producto al catálogo maestro con su imagen y área de producción directa
+    public function registrarProducto($categoria_id, $nombre, $area_produccion, $descripcion, $precio_costo, $precio_base, $unidad_medida, $maneja_stock, $stock_actual, $stock_minimo, $es_extra, $es_sabor_pizza, $imagen) {
+        // 🌟 MODIFICADO: Añadimos la columna y el marcador :area_produccion al query INSERT
+        $sql = "INSERT INTO productos (categoria_id, nombre, area_produccion, descripcion, precio_costo, precio_base, unidad_medida, maneja_stock, stock_actual, stock_minimo, es_extra, es_sabor_pizza, imagen) 
+                VALUES (:categoria_id, :nombre, :area_produccion, :descripcion, :precio_costo, :precio_base, :unidad_medida, :maneja_stock, :stock_actual, :stock_minimo, :es_extra, :es_sabor_pizza, :imagen)";
         
         $stmt = $this->db->prepare($sql);
         return $stmt->execute([
-            'categoria_id'   => $categoria_id,
-            'nombre'         => $nombre,
-            'descripcion'    => $descripcion,
-            'precio_costo'   => $precio_costo,
-            'precio_base'    => $precio_base,
-            'unidad_medida'  => $unidad_medida,
-            'maneja_stock'   => $maneja_stock,
-            'stock_actual'   => $stock_actual,
-            'stock_minimo'   => $stock_minimo,
-            'es_extra'       => $es_extra,
-            'es_sabor_pizza' => $es_sabor_pizza,
-            'imagen'         => $imagen
+            'categoria_id'    => $categoria_id,
+            'nombre'          => $nombre,
+            'area_produccion' => $area_produccion, // 🚀 Guardado directo del ENUM en MySQL
+            'descripcion'     => $descripcion,
+            'precio_costo'    => $precio_costo,
+            'precio_base'     => $precio_base,
+            'unidad_medida'   => $unidad_medida,
+            'maneja_stock'    => $maneja_stock,
+            'stock_actual'    => $stock_actual,
+            'stock_minimo'    => $stock_minimo,
+            'es_extra'        => $es_extra,
+            'es_sabor_pizza'  => $es_sabor_pizza,
+            'imagen'          => $imagen
         ]);
     }
 
     // ACTUALIZAR: Modifica los datos. Si la imagen viene vacía, conserva la anterior.
-    public function actualizarProducto($id, $categoria_id, $nombre, $descripcion, $precio_costo, $precio_base, $unidad_medida, $maneja_stock, $stock_actual, $stock_minimo, $es_extra, $es_sabor_pizza, $imagen = null) {
+    public function actualizarProducto($id, $categoria_id, $nombre, $area_produccion, $descripcion, $precio_costo, $precio_base, $unidad_medida, $maneja_stock, $stock_actual, $stock_minimo, $es_extra, $es_sabor_pizza, $imagen = null) {
+        // 🌟 MODIFICADO: Inyectamos el seteo de area_produccion = :area_produccion en ambos escenarios SQL
         if ($imagen !== null) {
-            $sql = "UPDATE productos SET categoria_id = :categoria_id, nombre = :nombre, descripcion = :descripcion, precio_costo = :precio_costo, precio_base = :precio_base, unidad_medida = :unidad_medida, maneja_stock = :maneja_stock, stock_actual = :stock_actual, stock_minimo = :stock_minimo, es_extra = :es_extra, es_sabor_pizza = :es_sabor_pizza, imagen = :imagen WHERE id = :id";
+            $sql = "UPDATE productos SET categoria_id = :categoria_id, nombre = :nombre, area_produccion = :area_produccion, descripcion = :descripcion, precio_costo = :precio_costo, precio_base = :precio_base, unidad_medida = :unidad_medida, maneja_stock = :maneja_stock, stock_actual = :stock_actual, stock_minimo = :stock_minimo, es_extra = :es_extra, es_sabor_pizza = :es_sabor_pizza, imagen = :imagen WHERE id = :id";
             $params = ['imagen' => $imagen];
         } else {
-            $sql = "UPDATE productos SET categoria_id = :categoria_id, nombre = :nombre, descripcion = :descripcion, precio_costo = :precio_costo, precio_base = :precio_base, unidad_medida = :unidad_medida, maneja_stock = :maneja_stock, stock_actual = :stock_actual, stock_minimo = :stock_minimo, es_extra = :es_extra, es_sabor_pizza = :es_sabor_pizza WHERE id = :id";
+            $sql = "UPDATE productos SET categoria_id = :categoria_id, nombre = :nombre, area_produccion = :area_produccion, descripcion = :descripcion, precio_costo = :precio_costo, precio_base = :precio_base, unidad_medida = :unidad_medida, maneja_stock = :maneja_stock, stock_actual = :stock_actual, stock_minimo = :stock_minimo, es_extra = :es_extra, es_sabor_pizza = :es_sabor_pizza WHERE id = :id";
             $params = [];
         }
 
         $params = array_merge($params, [
-            'categoria_id'   => $categoria_id,
-            'nombre'         => $nombre,
-            'descripcion'    => $descripcion,
-            'precio_costo'   => $precio_costo,
-            'precio_base'    => $precio_base,
-            'unidad_medida'  => $unidad_medida,
-            'maneja_stock'   => $maneja_stock,
-            'stock_actual'   => $stock_actual,
-            'stock_minimo'   => $stock_minimo,
-            'es_extra'       => $es_extra,
-            'es_sabor_pizza' => $es_sabor_pizza,
-            'id'             => $id
+            'categoria_id'    => $categoria_id,
+            'nombre'          => $nombre,
+            'area_produccion' => $area_produccion, // 🚀 Sincronización del cambio de pantalla en la edición
+            'descripcion'     => $descripcion,
+            'precio_costo'    => $precio_costo,
+            'precio_base'     => $precio_base,
+            'unidad_medida'   => $unidad_medida,
+            'maneja_stock'    => $maneja_stock,
+            'stock_actual'    => $stock_actual,
+            'stock_minimo'    => $stock_minimo,
+            'es_extra'        => $es_extra,
+            'es_sabor_pizza'  => $es_sabor_pizza,
+            'id'              => $id
         ]);
 
         $stmt = $this->db->prepare($sql);
         return $stmt->execute($params);
     }
+
 
     // BORRADO LÓGICO: Registra la fecha de baja para no romper el historial de comandas
     public function eliminarProductoLogico($id) {

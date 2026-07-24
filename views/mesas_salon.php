@@ -357,29 +357,32 @@ $deliverysAbiertos = $stmtPend->fetchAll();
 
     <!-- 🧠 LÓGICA DE NAVEGACIÓN DIGITAL PARA DISPOSITIVOS TÁCTILES -->
     <script>
-        // CONTROL A: Gestión táctil para las mesas físicas del local
-        function gestionarMesa(id, estado, numeroMesa) {
-            const protocol = window.location.protocol + "//";
-            const host = window.location.host;
-            const urlBase = host === 'localhost' ? protocol + host + "/pizzeria/" : protocol + host + "/";
+      // 🚀 REEMPLAZA TU FUNCIÓN gestionarMesa EN TU ARCHIVO POR ESTA VERSIÓN CON CIRCUITO CERRADO:
 
-            if (estado === 'mantenimiento') {
-                alert(`⚠️ La ${numeroMesa} se encuentra actualmente bajo mantenimiento operativo.`);
-                return;
-            }
+// CONTROL A: Gestión táctil para las mesas físicas del local (Crea o Recupera en un clic)
+function gestionarMesa(id, estado, numeroMesa) {
+    const protocol = window.location.protocol + "//";
+    const host = window.location.host;
+    const urlBase = host === 'localhost' ? protocol + host + "/pizzeria/" : protocol + host + "/";
 
-            if (estado === 'disponible') {
-                // Al tocar una mesa verde, lo enviamos al flujo ordinario de comensales
-                window.location.href = `${urlBase}index.php?v=abrir_comanda&mesa_id=${id}&tipo_pedido=local`;
-            } else if (estado === 'ocupada') {
-                // Al tocar una mesa roja, lo enviamos directo al punto de venta con la cuenta abierta
-                window.location.href = `${urlBase}index.php?v=tomar_pedido&pedido_id=${id}`;
-            } else if (estado === 'reservada') {
-                if (confirm(`¿Llegaron los clientes de la ${numeroMesa}? ¿Deseas abrir la comanda?`)) {
-                    window.location.href = `${urlBase}index.php?v=abrir_comanda&mesa_id=${id}&tipo_pedido=local`;
-                }
-            }
+    if (estado === 'mantenimiento') {
+        alert(`⚠️ La ${numeroMesa} se encuentra actualmente bajo mantenimiento operativo.`);
+        return;
+    }
+
+    // 🌟 UNIFICACIÓN OPERATIVA: Tanto si está Verde (disponible) como si está Roja (ocupada),
+    // mandamos el ID de la mesa física hacia 'abrir_comanda'.
+    // Nuestro nuevo candado en index.php interceptará el viaje: si está libre creará el ticket, 
+    // y si ya está ocupada recuperará el ID exacto de la cuenta activa enviando al mesero de regreso al POS.
+    if (estado === 'disponible' || estado === 'ocupada') {
+        window.location.href = `${urlBase}index.php?v=abrir_comanda&mesa_id=${id}&tipo_pedido=local`;
+    } else if (estado === 'reservada') {
+        if (confirm(`¿Llegaron los clientes de la ${numeroMesa}? ¿Deseas abrir la comanda?`)) {
+            window.location.href = `${urlBase}index.php?v=abrir_comanda&mesa_id=${id}&tipo_pedido=local`;
         }
+    }
+}
+
 
         // Asegúrate de que tu función abrirPedidoRapido en views/mesas_salon.php esté exactamente así:
         function abrirPedidoRapido(tipo) {
