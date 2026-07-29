@@ -1,6 +1,9 @@
 <?php
 // index.php (Raíz del proyecto - Ecosistema Jungle Pizza)
 
+// En la línea 2 de tu index.php antes de cualquier otra cosa
+date_default_timezone_set('America/Managua');
+
 // 1. Forzar a PHP a mostrar cualquier error oculto en pantalla para depuración limpia
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -16,6 +19,39 @@ require_once __DIR__ . '/controllers/UsuarioController.php';
 
 // 4. Capturar la acción de vista que solicita el usuario (por defecto va al login)
 $vista = $_GET['v'] ?? 'login';
+// ============================================================================
+// 🖨️ INTERCEPTOR EXCLUSIVO PARA IMPRESIONES Y CONSULTAS ASÍNCRONAS AJAX (CORREGIDO)
+// ============================================================================
+if (isset($_GET['v']) && ($_GET['v'] === 'imprimir_ticket' || $_GET['v'] === 'imprimir_cierre' || $_GET['v'] === 'api_detalle_compra')) {
+    
+    // Filtro de seguridad unificado para impresiones y consumo de APIs de auditoría
+    if (!isset($_SESSION['usuario_id'])) { 
+        if ($_GET['v'] === 'api_detalle_compra') {
+            echo json_encode(['status' => 'error', 'msg' => 'Sesión inválida o expirada.']);
+        } else {
+            header('Location: index.php?v=login'); 
+        }
+        exit; 
+    }
+    
+    // Enrutamiento modular limpio e independiente
+    if ($_GET['v'] === 'imprimir_ticket') {
+        require_once __DIR__ . '/views/imprimir_ticket.php';
+    } elseif ($_GET['v'] === 'imprimir_cierre') {
+        require_once __DIR__ . '/views/imprimir_cierre.php';
+    } elseif ($_GET['v'] === 'api_detalle_compra') {
+        // Al estar incluido en el IF principal, este bloque se ejecutará limpiamente
+        require_once __DIR__ . '/controllers/CompraController.php';
+        $apiController = new CompraController();
+        $apiController->obtenerDetalleCompraAjax(); 
+    }
+    exit; 
+}
+
+
+
+
+
 
 // 5. Instanciar el controlador de usuarios para verificar el estado del sistema
 $usuarioCtrl = new UsuarioController();
@@ -98,6 +134,9 @@ switch ($vista) {
         require_once __DIR__ . '/views/usuarios.php';
         break;
 
+      
+
+
 
     // ============================================================================
     // 🍕 MÓDULOS OPERATIVOS: ACCESO COMBINADO PARA SUPERADMIN (1), ADMIN (2) Y SUPERVISOR (3)
@@ -108,6 +147,17 @@ switch ($vista) {
     case 'mantenimiento_categorias':
     case 'mantenimiento_areas':
     case 'mantenimiento_mesas':
+    case 'proveedores': // 🌟 RUTA NUEVA: Módulo de Proveedores agregado
+    case 'inventario_ajustes': // 🌟 RUTA NUEVA: Módulo de Kardex y Ajustes de Stock agregado
+    case 'gestion_caja': // 🌟 RUTA NUEVA: Módulo de Apertura, Arqueo y Cierre de Caja
+    case 'cobranza_lista':    // 🌟 RUTA NUEVA: Cola de pedidos pendientes de cobro
+    case 'cobranza_facturar': // 🌟 RUTA NUEVA: Formulario de cobro mixto, propina y descuento
+    case 'cobranza_historial': // 🌟 INTERCEPCIÓN QUIRÚRGICA: Historial de Facturas
+    case 'ventas_productos': // 🌟 RUTA NUEVA: Módulo Analítico de Productos Vendidos
+    case 'compras_lista':     // 🌟 RUTA NUEVA: Historial de facturas de compras ingresadas
+    case 'compras_registrar': // 🌟 RUTA NUEVA: Formulario dinámico para abastecer insumos
+    case 'reportes_mensuales': // 🌟 RUTA NUEVA: Balance de Ventas y Compras Mensuales
+    
         if (!isset($_SESSION['usuario_id']) || !isset($_SESSION['rol_id'])) {
             header('Location: index.php?v=login');
             exit;
@@ -126,6 +176,16 @@ switch ($vista) {
         elseif ($vista === 'mantenimiento_categories' || $vista === 'mantenimiento_categorias') require_once __DIR__ . '/views/categorias.php';
         elseif ($vista === 'mantenimiento_areas') require_once __DIR__ . '/views/areas.php';
         elseif ($vista === 'mantenimiento_mesas') require_once __DIR__ . '/views/mesas.php';
+        elseif ($vista === 'proveedores') require_once __DIR__ . '/views/proveedores.php'; // 🌟 Invoca tu nueva vista
+        elseif ($vista === 'inventario_ajustes') require_once __DIR__ . '/views/inventario_ajustes.php'; // 🌟 Invoca tu nueva vista de Kardex
+        elseif ($vista === 'gestion_caja') require_once __DIR__ . '/views/gestion_caja.php'; // 🌟 Invoca tu nueva vista de Caja
+        elseif ($vista === 'cobranza_lista') require_once __DIR__ . '/views/cobranza_lista.php';       // 🌟 Carga la cola
+        elseif ($vista === 'cobranza_facturar') require_once __DIR__ . '/views/cobranza_facturar.php'; // 🌟 Carga la calculadora
+        elseif ($vista === 'cobranza_historial') require_once __DIR__ . '/views/cobranza_historial.php'; // 🌟 Invoca tu archivo físico
+        elseif ($vista === 'ventas_productos') require_once __DIR__ . '/views/ventas_productos.php'; // 🌟 Invoca tu nuevo reporte
+        elseif ($vista === 'compras_lista') require_once __DIR__ . '/views/compras_lista.php';         // 🌟 Invoca la lista
+        elseif ($vista === 'compras_registrar') require_once __DIR__ . '/views/compras_registrar.php'; // 🌟 Invoca el formulario
+        elseif ($vista === 'reportes_mensuales') require_once __DIR__ . '/views/reportes_mensuales.php'; // 🌟 Invoca el reporte unificado
         break;
     // ============================================================================
     // 🍳 PANTALLAS DE PRODUCCIÓN KDS: ACCESO LIBRE SEGÚN ESTACIÓN
@@ -224,6 +284,24 @@ switch ($vista) {
         if (!isset($_SESSION['usuario_id'])) { header('Location: index.php?v=login'); exit; }
         require_once __DIR__ . '/views/kds_monitor.php';
         break;
+        // ============================================================================
+        // 🧾 IMPRESIÓN DE PRECUENTA: Vista térmica optimizada para tiquetera del salón
+        // ============================================================================
+        case 'precuenta':
+            if (!isset($_SESSION['usuario_id'])) {
+                header('Location: index.php?v=login');
+                exit;
+            }
+            
+            $pedido_id = isset($_GET['pedido_id']) ? intval($_GET['pedido_id']) : 0;
+            if ($pedido_id <= 0) {
+                header('Location: index.php?v=mesas&error=' . urlencode('ID de comanda inválido para precuenta.'));
+                exit;
+            }
+            
+            // Invoca directamente al archivo físico de impresión térmica
+            require_once __DIR__ . '/views/precuenta_ticket.php';
+            break;
 
 
     // ============================================================================

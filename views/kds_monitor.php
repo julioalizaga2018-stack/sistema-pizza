@@ -224,9 +224,31 @@ $info_estacion = $titulos[$estacion_activa];
                             <span style="font-weight: 800; font-size: 15px; color: #cbd5e1;">ORDER #<?php echo $pedido_id; ?></span>
                             <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">⏰ <?php echo date('h:i A', strtotime($primer_item['hora_pedido'])); ?></div>
                         </div>
-                        <span style="background: <?php echo $border_color; ?>20; color: <?php echo $border_color; ?>; padding: 4px 8px; border-radius: 4px; font-weight: 800; font-size: 11px;">
-                            <?php echo ($tipo_orden === 'LOCAL') ? '🪑 MESA ' . htmlspecialchars($primer_item['numero_mesa']) : '📦 DELIVERY'; ?>
-                        </span>
+                     <!-- 🚀 REEMPLAZE EL BLOQUE DE LA LÍNEA 228 EN views/kds_monitor.php POR ESTA VERSIÓN CON DETECTOR TRIPLE: -->
+<span style="background: <?php echo $border_color; ?>20; color: <?php echo $border_color; ?>; padding: 4px 8px; border-radius: 4px; font-weight: 800; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; letter-spacing: 0.2px;">
+    <?php 
+    // Convertimos a mayúsculas para evitar quiebres por diferencias de escritura en MySQL
+    $modalidad_limpia = strtoupper(trim($tipo_orden ?? 'LOCAL'));
+
+    if ($modalidad_limpia === 'LOCAL') {
+        // Canal A: Pedido en el establecimiento con inyección relacional de área
+        $area_comercial = !empty($primer_item['nombre_area']) ? htmlspecialchars($primer_item['nombre_area']) . " ➔ " : "";
+        $mesa_comercial = !empty($primer_item['nombre_mesa']) ? htmlspecialchars($primer_item['nombre_mesa']) : "Mesa";
+        
+        echo "🪑 " . $area_comercial . "MESA " . $mesa_comercial;
+
+    } elseif ($modalidad_limpia === 'RETIRO') {
+        // 🏃 Canal B: El cliente pasa recogiendo el pedido por el local
+        echo "🏃 RETIRO / PARA LLEVAR";
+
+    } else {
+        // 📦 Canal C: Despacho a domicilio mediante motorizado (Caso Delivery real)
+        echo "📦 DELIVERY";
+    }
+    ?>
+</span>
+
+
                     </div>
 
                     <div class="ticket-card-body">
@@ -234,71 +256,71 @@ $info_estacion = $titulos[$estacion_activa];
                             👤 Mesero: <strong style="color: #cbd5e1;"><?php echo htmlspecialchars($primer_item['nombre_mesero'] ?? 'Julio'); ?></strong>
                         </div>
 
-                       <!-- 🚀 REEMPLAZE EL BUCLE FOREACH DE LOS PRODUCTOS INTERNOS ADENTRO DE LA TARJETA POR ESTE BLOQUE SENIOR: -->
-<?php foreach ($items_pedido as $it): ?>
-    <div style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px dashed #475569;" id="row-item-<?php echo $it['detalle_id']; ?>">
-        
-        <!-- Línea Principal del Platillo -->
-        <div class="product-line" style="display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: 700; margin-bottom: 6px;">
-            <span><?php echo (int)$it['cantidad']; ?>x <?php echo htmlspecialchars($it['nombre_producto']); ?></span>
-            
-            <!-- 🌟 MÁQUINA DE ESTADOS VISUAL: Cambia de color e indicador según el flujo real -->
-            <?php if ($it['item_estado'] === 'pendiente'): ?>
-                <span class="status-pill" style="background: #c92a2a20; color: #ff8787; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 4px; text-transform: uppercase;">🛑 En Cola</span>
-            <?php elseif ($it['item_estado'] === 'preparando'): ?>
-                <span class="status-pill" style="background: #e67e2220; color: #ffd8a8; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 4px; text-transform: uppercase;">🔥 Fuego</span>
-            <?php else: ?>
-                <span class="status-pill" style="background: #2b8a3e20; color: #8ce99a; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 4px; text-transform: uppercase;"><?php echo htmlspecialchars($it['item_estado']); ?></span>
-            <?php endif; ?>
-        </div>
+                        <!-- 🚀 REEMPLAZE EL BUCLE FOREACH DE LOS PRODUCTOS INTERNOS ADENTRO DE LA TARJETA POR ESTE BLOQUE SENIOR: -->
+                        <?php foreach ($items_pedido as $it): ?>
+                            <div style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px dashed #475569;" id="row-item-<?php echo $it['detalle_id']; ?>">
 
-        <!-- 🌓 PARTICIONES DE SABORES (Para Pizzas Combinadas / Mixtas) -->
-        <?php if ((int)$it['es_mixta'] === 1 && !empty($it['sabores'])): ?>
-            <div style="background: #1e293b; border: 1px solid #475569; border-left: 4px solid #3182ce; padding: 6px 10px; border-radius: 6px; margin-top: 4px; margin-bottom: 6px;">
-                <span style="font-size: 11px; text-transform: uppercase; color: #63b3ed; font-weight: 800; display: block; margin-bottom: 2px;">🌗 Mitades Combinadas:</span>
-                <?php foreach ($it['sabores'] as $sab): ?>
-                    <div style="font-size: 13px; color: #cbd5e1; font-weight: bold; padding: 1px 0;">
-                        🍕 Mitad: <?php echo htmlspecialchars($sab['nombre_sabor']); ?>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        <?php endif; ?>
+                                <!-- Línea Principal del Platillo -->
+                                <div class="product-line" style="display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: 700; margin-bottom: 6px;">
+                                    <span><?php echo (int)$it['cantidad']; ?>x <?php echo htmlspecialchars($it['nombre_producto']); ?></span>
 
-        <!-- ➕ INGREDIENTES EXTRAS (Sincronizado de forma relacional al español) -->
-        <?php if (!empty($it['extras'])): ?>
-            <div style="background: #1e293b; border: 1px solid #475569; border-left: 4px solid #ecc94b; padding: 6px 10px; border-radius: 6px; margin-top: 4px; margin-bottom: 6px;">
-                <?php foreach ($it['extras'] as $ex): ?>
-                    <div style="font-size: 13px; color: #f6ad55; font-weight: bold; padding: 1px 0;">
-                        ➕ <?php echo (int)$ex['cant_extra']; ?>x <?php echo htmlspecialchars($ex['nombre_extra']); ?>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        <?php endif; ?>
+                                    <!-- 🌟 MÁQUINA DE ESTADOS VISUAL: Cambia de color e indicador según el flujo real -->
+                                    <?php if ($it['item_estado'] === 'pendiente'): ?>
+                                        <span class="status-pill" style="background: #c92a2a20; color: #ff8787; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 4px; text-transform: uppercase;">🛑 En Cola</span>
+                                    <?php elseif ($it['item_estado'] === 'preparando'): ?>
+                                        <span class="status-pill" style="background: #e67e2220; color: #ffd8a8; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 4px; text-transform: uppercase;">🔥 Fuego</span>
+                                    <?php else: ?>
+                                        <span class="status-pill" style="background: #2b8a3e20; color: #8ce99a; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 4px; text-transform: uppercase;"><?php echo htmlspecialchars($it['item_estado']); ?></span>
+                                    <?php endif; ?>
+                                </div>
 
-        <!-- 🎛️ BOTONERA DINÁMICA TÁCTIL SENIOR -->
-        <div style="display: flex; gap: 6px; margin-top: 8px;">
-            <?php if ($it['item_estado'] === 'pendiente'): ?>
-                <!-- Estado 1: El plato está en cola, habilitamos el botón para meterlo a cocinar -->
-                <button class="btn-kds-action btn-kds-prepare" style="flex:1; background: #d9480f; color:#fff; border:none; padding: 8px; font-weight:800; border-radius: 6px; font-size: 11px; cursor: pointer; text-transform:uppercase;" 
-                        onclick="alterarEstadoItem(<?php echo $it['detalle_id']; ?>, 'preparando')">
-                    👨‍🍳 Aceptar Orden
-                </button>
-            <?php elseif ($it['item_estado'] === 'preparando'): ?>
-                <!-- Estado 2: El plato ya está en el fuego, habilitamos el botón para liberarlo de cocina -->
-                <button class="btn-kds-action btn-kds-ready" style="flex:1; background: #2b8a3e; color:#fff; border:none; padding: 8px; font-weight:800; border-radius: 6px; font-size: 11px; cursor: pointer; text-transform:uppercase;" 
-                        onclick="alterarEstadoItem(<?php echo $it['detalle_id']; ?>, 'listo')">
-                    ✅ Despachar Platillo
-                </button>
-            <?php endif; ?>
+                                <!-- 🌓 PARTICIONES DE SABORES (Para Pizzas Combinadas / Mixtas) -->
+                                <?php if ((int)$it['es_mixta'] === 1 && !empty($it['sabores'])): ?>
+                                    <div style="background: #1e293b; border: 1px solid #475569; border-left: 4px solid #3182ce; padding: 6px 10px; border-radius: 6px; margin-top: 4px; margin-bottom: 6px;">
+                                        <span style="font-size: 11px; text-transform: uppercase; color: #63b3ed; font-weight: 800; display: block; margin-bottom: 2px;">🌗 Mitades Combinadas:</span>
+                                        <?php foreach ($it['sabores'] as $sab): ?>
+                                            <div style="font-size: 13px; color: #cbd5e1; font-weight: bold; padding: 1px 0;">
+                                                🍕 Mitad: <?php echo htmlspecialchars($sab['nombre_sabor']); ?>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php endif; ?>
 
-            <!-- Botón de Contingencia: Remueve con merma inyectando 'quitado_despues' y pidiendo justificación -->
-            <button class="btn-kds-action" style="background: #212529; color: #cbd5e1; border:none; padding: 8px; font-weight:800; border-radius: 6px; font-size: 11px; cursor: pointer;" 
-                    onclick="rechazarItemPorInsumo(<?php echo $it['detalle_id']; ?>, <?php echo $pedido_id; ?>, '<?php echo htmlspecialchars($it['nombre_producto']); ?>')">
-                ❌ Quitar
-            </button>
-        </div>
-    </div>
-<?php endforeach; ?>
+                                <!-- ➕ INGREDIENTES EXTRAS (Sincronizado de forma relacional al español) -->
+                                <?php if (!empty($it['extras'])): ?>
+                                    <div style="background: #1e293b; border: 1px solid #475569; border-left: 4px solid #ecc94b; padding: 6px 10px; border-radius: 6px; margin-top: 4px; margin-bottom: 6px;">
+                                        <?php foreach ($it['extras'] as $ex): ?>
+                                            <div style="font-size: 13px; color: #f6ad55; font-weight: bold; padding: 1px 0;">
+                                                ➕ <?php echo (int)$ex['cant_extra']; ?>x <?php echo htmlspecialchars($ex['nombre_extra']); ?>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php endif; ?>
+
+                                <!-- 🎛️ BOTONERA DINÁMICA TÁCTIL SENIOR -->
+                                <div style="display: flex; gap: 6px; margin-top: 8px;">
+                                    <?php if ($it['item_estado'] === 'pendiente'): ?>
+                                        <!-- Estado 1: El plato está en cola, habilitamos el botón para meterlo a cocinar -->
+                                        <button class="btn-kds-action btn-kds-prepare" style="flex:1; background: #d9480f; color:#fff; border:none; padding: 8px; font-weight:800; border-radius: 6px; font-size: 11px; cursor: pointer; text-transform:uppercase;"
+                                            onclick="alterarEstadoItem(<?php echo $it['detalle_id']; ?>, 'preparando')">
+                                            👨‍🍳 Aceptar Orden
+                                        </button>
+                                    <?php elseif ($it['item_estado'] === 'preparando'): ?>
+                                        <!-- Estado 2: El plato ya está en el fuego, habilitamos el botón para liberarlo de cocina -->
+                                        <button class="btn-kds-action btn-kds-ready" style="flex:1; background: #2b8a3e; color:#fff; border:none; padding: 8px; font-weight:800; border-radius: 6px; font-size: 11px; cursor: pointer; text-transform:uppercase;"
+                                            onclick="alterarEstadoItem(<?php echo $it['detalle_id']; ?>, 'listo')">
+                                            ✅ Despachar Platillo
+                                        </button>
+                                    <?php endif; ?>
+
+                                    <!-- Botón de Contingencia: Remueve con merma inyectando 'quitado_despues' y pidiendo justificación -->
+                                    <button class="btn-kds-action" style="background: #212529; color: #cbd5e1; border:none; padding: 8px; font-weight:800; border-radius: 6px; font-size: 11px; cursor: pointer;"
+                                        onclick="rechazarItemPorInsumo(<?php echo $it['detalle_id']; ?>, <?php echo $pedido_id; ?>, '<?php echo htmlspecialchars($it['nombre_producto']); ?>')">
+                                        ❌ Quitar
+                                    </button>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
 
 
                     </div>

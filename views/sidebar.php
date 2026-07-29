@@ -73,6 +73,38 @@ if (!defined('URL_BASE')) {
         <li>
             <a href="<?php echo URL_BASE; ?>index.php?v=mantenimiento_categorias" class="nav-link <?php echo ($vista_actual == 'mantenimiento_categorias') ? 'active' : ''; ?>">🗂️ Categorías</a>
         </li>
+         <!-- 🌟 NUEVO ENLACE INTEGRADO NATIVAMENTE -->
+        <li>
+            <a href="<?php echo URL_BASE; ?>index.php?v=proveedores" class="nav-link <?php echo ($vista_actual == 'proveedores') ? 'active' : ''; ?>">🚚 Proveedores</a>
+        </li>
+        <!-- 🌟 NUEVO ENLACE DE AUDITORÍA INTEGRADO NATIVAMENTE -->
+        <li>
+            <a href="<?php echo URL_BASE; ?>index.php?v=inventario_ajustes" class="nav-link <?php echo ($vista_actual == 'inventario_ajustes') ? 'active' : ''; ?>">📊 Historial Kardex</a>
+        </li>
+        <!-- 🌟 NUEVO ENLACE DE CAJA INTEGRADO NATIVAMENTE -->
+        <li>
+            <a href="<?php echo URL_BASE; ?>index.php?v=gestion_caja" class="nav-link <?php echo ($vista_actual == 'gestion_caja') ? 'active' : ''; ?>">💵 Apertura y Arqueo</a>
+        </li>
+         <!-- 🌟 NUEVO ENLACE DE FACTURACIÓN INTEGRADO NATIVAMENTE -->
+        <li>
+            <a href="<?php echo URL_BASE; ?>index.php?v=cobranza_lista" class="nav-link <?php echo ($vista_actual == 'cobranza_lista' || $vista_actual == 'cobranza_facturar') ? 'active' : ''; ?>">🧾 Módulo de Cobranza</a>
+        </li>
+        <!-- 🌟 NUEVO ENLACE DE AUDITORÍA HISTÓRICA INTEGRADO NATIVAMENTE -->
+        <li>
+            <a href="<?php echo URL_BASE; ?>index.php?v=cobranza_historial" class="nav-link <?php echo ($vista_actual == 'cobranza_historial') ? 'active' : ''; ?>">📊 Historial Facturas</a>
+        </li>
+        <!-- 🌟 NUEVO ENLACE DE REPORTE POR PRODUCTOS INTEGRADO NATIVAMENTE -->
+        <li>
+            <a href="<?php echo URL_BASE; ?>index.php?v=ventas_productos" class="nav-link <?php echo ($vista_actual == 'ventas_productos') ? 'active' : ''; ?>">🍕 Ventas por Producto</a>
+        </li>
+         <!-- 🌟 NUEVO ENLACE DE COMPRAS DE INSUMOS INTEGRADO NATIVAMENTE -->
+        <li>
+            <a href="<?php echo URL_BASE; ?>index.php?v=compras_lista" class="nav-link <?php echo ($vista_actual == 'compras_lista' || $vista_actual == 'compras_registrar') ? 'active' : ''; ?>">📦 Registro de Compras</a>
+        </li>
+        <!-- 🌟 NUEVO ENLACE DE RENDIMIENTO MENSUAL INTEGRADO NATIVAMENTE -->
+        <li>
+            <a href="<?php echo URL_BASE; ?>index.php?v=reportes_mensuales" class="nav-link <?php echo ($vista_actual == 'reportes_mensuales') ? 'active' : ''; ?>">📊 Cierre Balance Mensual</a>
+        </li>
     <?php endif; ?>
 </ul>
 

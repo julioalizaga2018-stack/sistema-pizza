@@ -12,20 +12,26 @@ class KdsModelo {
         try {
             // 🌟 CORRECCIÓN MAESTRA: Cambiamos p.usuario_id por u.nombre para jalar el texto real del mesero
             // También cambiamos p.mesa_id por m.numero_mesa para jalar el nombre/número real de la mesa física
+           // 🔍 REEMPLAZE ÚNICAMENTE LA SENTENCIA $sql ADENTRO DE obtenerComandasPorEstacion EN models/KdsModelo.php:
+
+            // 🌟 EXTRACTOR RELACIONAL: Acoplamos m.area_id con a.id para jalar el nombre del sector físico
             $sql = "SELECT pd.id as detalle_id, pd.pedido_id, pd.cantidad, pd.precio_unitario, pd.estado as item_estado, pd.es_mixta,
                            p.tipo_pedido, p.created_at as hora_pedido,
                            prod.nombre as nombre_producto,
-                           m.numero_mesa,          -- 🚀 Trae 'Mesa Sofa', 'Mesa 1', etc.
-                           u.nombre as nombre_mesero -- 🚀 Trae 'Julio', 'Carlos', etc.
+                           m.numero_mesa as nombre_mesa, 
+                           a.nombre as nombre_area,       -- 🚀 CAPTURA DEL NOMBRE DESDE TU TABLA MAESTRO DE ÁREAS
+                           u.nombre as nombre_mesero
                     FROM pedido_detalles pd
                     INNER JOIN pedidos p ON pd.pedido_id = p.id
                     INNER JOIN productos prod ON pd.producto_id = prod.id
                     LEFT JOIN mesas m ON p.mesa_id = m.id
-                    LEFT JOIN usuarios u ON p.usuario_id = u.id -- Conexión directa a tu tabla de personal
+                    LEFT JOIN areas a ON m.area_id = a.id -- 🚀 CONEXIÓN FIJA A TU TABLA DE PHPMYADMIN
+                    LEFT JOIN usuarios u ON p.usuario_id = u.id
                     WHERE prod.area_produccion = :area_prod
                       AND pd.estado IN ('pendiente', 'preparando')
                       AND p.estado = 'pendiente'
                     ORDER BY p.id ASC, pd.id ASC";
+
 
             $stmt = $this->db->prepare($sql);
             $stmt->execute(['area_prod' => trim($area_produccion)]);
