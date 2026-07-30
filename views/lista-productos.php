@@ -128,46 +128,60 @@ $msg_success = $_GET['success'] ?? null;
                                             <?php endif; ?>
                                         </td>
 
-                                       <!-- 🚀 REEMPLÁZALA EXACTAMENTE POR ESTA MAQUETA CON LOS BADGES DE PRODUCCIÓN: -->
-<td>
-    <strong style="color:var(--verde-oscuro); display:block; font-size:15px; margin-bottom: 5px;"><?php echo htmlspecialchars($p['nombre']); ?></strong>
-    
-    <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
-        <!-- Badge 1: Clasificación Comercial (Tu código original intacto) -->
-        <span style="font-size:11px; text-transform:uppercase; font-weight:bold; color:#777; background:#f1f5f9; padding:2px 6px; border-radius:4px;">
-            <?php echo htmlspecialchars($p['nombre_categoria']); ?>
-        </span>
+                                        <!-- 🚀 REEMPLÁZALA EXACTAMENTE POR ESTA MAQUETA CON LOS BADGES DE PRODUCCIÓN: -->
+                                        <td>
+                                            <strong style="color:var(--verde-oscuro); display:block; font-size:15px; margin-bottom: 5px;"><?php echo htmlspecialchars($p['nombre']); ?></strong>
 
-        <!-- 🌟 Badge 2: Área de Producción Directa (Destino KDS) -->
-        <?php 
-        // Inicializamos variables de cortesía con cocina por defecto para proteger el historial
-        $badge_color = "#2b8a3e"; 
-        $badge_bg = "#ebfbee"; 
-        $badge_text = "🍳 Cocina";
-        
-        if (isset($p['area_produccion']) && !empty(trim($p['area_produccion']))) {
-            switch (trim($p['area_produccion'])) {
-                case 'horno':
-                    $badge_bg = "#fff4e6"; $badge_color = "#d9480f"; $badge_text = "🔥 Horno";
-                    break;
-                case 'cocina':
-                    $badge_bg = "#ebfbee"; $badge_color = "#2b8a3e"; $badge_text = "🍳 Cocina";
-                    break;
-                case 'bar':
-                    $badge_bg = "#e3f2fd"; $badge_color = "#0d47a1"; $badge_text = "🍹 Bar";
-                    break;
-                case 'despacho':
-                    $badge_bg = "#f3f0ff"; $badge_color = "#5f3dc4"; $badge_text = "📦 Despacho";
-                    break;
-            }
-        }
-        ?>
-        <span style="font-size:11px; text-transform:uppercase; font-weight:bold; color: <?php echo $badge_color; ?>; background: <?php echo $badge_bg; ?>; padding:2px 6px; border-radius:4px; display: inline-flex; align-items: center;">
-            <?php echo $badge_text; ?>
-        </span>
-    </div>
+                                            <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+                                                <!-- Badge 1: Clasificación Comercial (Tu código original intacto) -->
+                                                <span style="font-size:11px; text-transform:uppercase; font-weight:bold; color:#777; background:#f1f5f9; padding:2px 6px; border-radius:4px;">
+                                                    <?php echo htmlspecialchars($p['nombre_categoria']); ?>
+                                                </span>
 
-                                        <!-- Desglose de Precios (Costo vs Venta) -->
+                                                <!-- 🌟 Badge 2: Área de Producción Directa (Destino KDS) -->
+                                                <?php
+                                                // Inicializamos variables de cortesía con cocina por defecto para proteger el historial
+                                                $badge_color = "#2b8a3e";
+                                                $badge_bg = "#ebfbee";
+                                                $badge_text = "🍳 Cocina";
+
+                                                if (isset($p['area_produccion']) && !empty(trim($p['area_produccion']))) {
+                                                    switch (trim($p['area_produccion'])) {
+                                                        case 'horno':
+                                                            $badge_bg = "#fff4e6";
+                                                            $badge_color = "#d9480f";
+                                                            $badge_text = "🔥 Horno";
+                                                            break;
+                                                        case 'cocina':
+                                                            $badge_bg = "#ebfbee";
+                                                            $badge_color = "#2b8a3e";
+                                                            $badge_text = "🍳 Cocina";
+                                                            break;
+                                                        case 'bar':
+                                                            $badge_bg = "#e3f2fd";
+                                                            $badge_color = "#0d47a1";
+                                                            $badge_text = "🍹 Bar";
+                                                            break;
+                                                        case 'despacho':
+                                                            $badge_bg = "#f3f0ff";
+                                                            $badge_color = "#5f3dc4";
+                                                            $badge_text = "📦 Despacho";
+                                                            break;
+                                                             // 🌟 INYECCIÓN DE LA NUEVA ETIQUETA CORPORATIVA PARA INSUMOS EN BODEGA
+                                                        case 'bodega':
+                                                            $badge_bg = "#f1f5f9";    // Fondo gris pizarra suave corporativo
+                                                            $badge_color = "#475569"; // Texto gris oscuro legible
+                                                            $badge_text = "📦 Bodega";
+                                                            break;
+                                                    }
+                                                }
+                                                ?>
+                                                <span style="font-size:11px; text-transform:uppercase; font-weight:bold; color: <?php echo $badge_color; ?>; background: <?php echo $badge_bg; ?>; padding:2px 6px; border-radius:4px; display: inline-flex; align-items: center;">
+                                                    <?php echo $badge_text; ?>
+                                                </span>
+                                            </div>
+
+                                            <!-- Desglose de Precios (Costo vs Venta) -->
                                         <td>
                                             <span style="font-size:12px; color:#777; display:block;">Costo: C$ <?php echo number_format($p['precio_costo'], 2); ?></span>
                                             <strong style="color:var(--naranja-pizza); font-size:14px;">Venta: C$ <?php echo number_format($p['precio_base'], 2); ?></strong>

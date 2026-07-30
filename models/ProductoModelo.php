@@ -20,6 +20,20 @@ class ProductoModelo extends Conexion {
         $stmt = $this->db->query($sql);
         return $stmt->fetchAll();
     }
+        // 🚀 NUEVO MÉTODO EXCLUSIVO PARA EL POS: Oculta los ingredientes de Bodega en el salón
+    public function listarProductosVenta() {
+        $sql = "SELECT p.*, c.nombre as nombre_categoria, 
+                       prov.nombre_empresa as nombre_proveedor 
+                FROM productos p 
+                INNER JOIN categorias c ON p.categoria_id = c.id
+                LEFT JOIN proveedores prov ON p.proveedor_id = prov.id
+                WHERE p.deleted_at IS NULL
+                  AND p.area_produccion != 'bodega' -- 🌟 Filtro protector para el menú táctil
+                ORDER BY p.id DESC";
+        $stmt = $this->db->query($sql);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
 
     // LISTAR CATEGORÍAS: Para alimentar el combo select del formulario
     public function listarCategoriasActivas() {
@@ -32,6 +46,28 @@ class ProductoModelo extends Conexion {
         }
         return $stmt->fetchAll();
     }
+        // 🚀 NUEVO MÉTODO EXCLUSIVO: Filtra y extrae solo las categorías para la toma de pedidos
+    public function listarCategoriasPedido() {
+        // Ejecutamos la consulta filtrando en caliente las clasificaciones que no queremos en el salón
+        $sql = "SELECT id, nombre FROM categorias 
+                WHERE deleted_at IS NULL 
+                  AND LOWER(nombre) NOT LIKE '%Mat Prima%' 
+                  AND LOWER(nombre) NOT LIKE '%prima%'
+                ORDER BY nombre ASC";
+        try {
+            // Aplicamos el mismo fallback elástico inteligente que ya tienes configurado
+            $stmt = $this->db->query($sql);
+        } catch (PDOException $e) {
+            $sql = "SELECT id, nombre FROM categories 
+                    WHERE deleted_at IS NULL 
+                      AND LOWER(nombre) NOT LIKE '%m. prima%' 
+                      AND LOWER(nombre) NOT LIKE '%materia%'
+                    ORDER BY nombre ASC";
+            $stmt = $this->db->query($sql);
+        }
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
 
     // 🚀 NUEVO MÉTODO OPERATIVO: Para alimentar el combo select de proveedores en el formulario
     public function listarProveedoresActivos() {

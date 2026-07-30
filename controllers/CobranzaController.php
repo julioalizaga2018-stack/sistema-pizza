@@ -62,17 +62,28 @@ class CobranzaController {
             // Ejecución quirúrgica en base de datos
             $resultado = $this->modelo->procesarPagoPedido($pedido_id, $turno['id'], $propina, $descuento, $pagos, $total_final);
 
-            if ($resultado) {
-                // Retornamos el origen y el pedido_id de forma explícita para la impresión posterior
-                return [
-                    'status' => 'success', 
-                    'msg' => '¡Pedido #' . $pedido_id . ' cobrado y facturado con éxito!', 
-                    'origen' => 'cobranza',
-                    'pedido_id' => $pedido_id
-                ];
-            } else {
-                return ['status' => 'error', 'msg' => 'Error crítico al registrar el pago mixto. Transaction rolled back.', 'origen' => 'cobranza'];
-            }
+           if ($resultado) {
+            // ============================================================================
+            // 🚀🚀 GATILLO MAESTRO EN CASCADA: DETONA EL REBAJO DE INGREDIENTES EN BODEGA
+            // ============================================================================
+            // Como el controlador ya cuenta con una variable de sesión iniciada arriba,
+            // capturamos de forma limpia el ID del usuario cajero en turno
+            $usuario_actual_id = isset($_SESSION['usuario_id']) ? (int)$_SESSION['usuario_id'] : 1;
+            
+            // Invocamos el método relacional que creamos en tu CobranzaModelo
+            // Este método escanea recetas, mitades (0.50) y la tabla de extras (ID 22)
+            $this->modelo->procesarDescuentoInventarioCascada($pedido_id, $usuario_actual_id);
+
+            // Retornamos el origen y el pedido_id de forma explícita para la impresión posterior
+            return [
+                'status'    => 'success', 
+                'msg'       => '¡Pedido #' . $pedido_id . ' cobrado y facturado con éxito!', 
+                'origen'    => 'cobranza',
+                'pedido_id' => $pedido_id
+            ];
+        } else {
+            return ['status' => 'error', 'msg' => 'Error crítico al registrar el pago mixto. Transaction rolled back.', 'origen' => 'cobranza'];
+        }
         }
         return null;
     }

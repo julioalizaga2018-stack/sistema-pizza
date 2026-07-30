@@ -22,7 +22,7 @@ $vista = $_GET['v'] ?? 'login';
 // ============================================================================
 // 🖨️ INTERCEPTOR EXCLUSIVO PARA IMPRESIONES Y CONSULTAS ASÍNCRONAS AJAX (CORREGIDO)
 // ============================================================================
-if (isset($_GET['v']) && ($_GET['v'] === 'imprimir_ticket' || $_GET['v'] === 'imprimir_cierre' || $_GET['v'] === 'api_detalle_compra')) {
+if (isset($_GET['v']) && ($_GET['v'] === 'imprimir_ticket' || $_GET['v'] === 'imprimir_cierre' || $_GET['v'] === 'api_detalle_compra' || $_GET['v'] === 'api_receta_detalle' || $_GET['v'] === 'imprimir_compra')) {
     
     // Filtro de seguridad unificado para impresiones y consumo de APIs de auditoría
     if (!isset($_SESSION['usuario_id'])) { 
@@ -37,14 +37,52 @@ if (isset($_GET['v']) && ($_GET['v'] === 'imprimir_ticket' || $_GET['v'] === 'im
     // Enrutamiento modular limpio e independiente
     if ($_GET['v'] === 'imprimir_ticket') {
         require_once __DIR__ . '/views/imprimir_ticket.php';
-    } elseif ($_GET['v'] === 'imprimir_cierre') {
+    }
+     elseif ($_GET['v'] === 'imprimir_cierre') {
         require_once __DIR__ . '/views/imprimir_cierre.php';
-    } elseif ($_GET['v'] === 'api_detalle_compra') {
+        
+    } 
+    // 🌟 NUEVA COMPUERTA: Invoca el renderizado térmico de la factura de abasto
+    elseif ($_GET['v'] === 'imprimir_compra') {
+        require_once __DIR__ . '/views/imprimir_compra.php';
+        exit;
+    }
+    elseif ($_GET['v'] === 'api_detalle_compra') {
         // Al estar incluido en el IF principal, este bloque se ejecutará limpiamente
         require_once __DIR__ . '/controllers/CompraController.php';
         $apiController = new CompraController();
         $apiController->obtenerDetalleCompraAjax(); 
     }
+            // 🌟 API EN CALIENTE TOTALMENTE CONTROLADA: Forzar salida limpia libre de espacios basura
+    elseif ($_GET['v'] === 'api_receta_detalle') {
+        // Desactivamos la inyección automática de errores en formato HTML para que no rompan el parseo de JS
+        ini_set('display_errors', 0); 
+        
+        // Limpiamos y destruimos CUALQUIER texto residual acumulado en memoria por XAMPP
+        while (ob_get_level()) { ob_end_clean(); }
+        
+        // Forzamos cabeceras HTTP de formato estrictas
+        header('Content-Type: application/json; charset=utf-8');
+        header('Cache-Control: no-cache, must-revalidate');
+        
+        require_once __DIR__ . '/models/RecetaModelo.php';
+        
+        $p_id = filter_var($_GET['plato_id'] ?? 0, FILTER_VALIDATE_INT);
+        
+        try {
+            $recetaModel = new RecetaModelo();
+            $data = $recetaModel->obtenerIngredientesDePlato($p_id);
+            
+            // Retornamos de forma explícita y forzada
+            echo json_encode(['status' => 'success', 'data' => $data]);
+            exit; // Detiene el servidor en el acto para evitar inyecciones posteriores
+        } catch (Exception $e) {
+            echo json_encode(['status' => 'error', 'msg' => $e->getMessage()]);
+            exit;
+        }
+    }
+
+
     exit; 
 }
 
@@ -157,6 +195,7 @@ switch ($vista) {
     case 'compras_lista':     // 🌟 RUTA NUEVA: Historial de facturas de compras ingresadas
     case 'compras_registrar': // 🌟 RUTA NUEVA: Formulario dinámico para abastecer insumos
     case 'reportes_mensuales': // 🌟 RUTA NUEVA: Balance de Ventas y Compras Mensuales
+    case 'recetas_lista': // 🌟 RUTA NUEVA: Panel CRUD maestro de Recetas e Ingredientes
     
         if (!isset($_SESSION['usuario_id']) || !isset($_SESSION['rol_id'])) {
             header('Location: index.php?v=login');
@@ -186,7 +225,8 @@ switch ($vista) {
         elseif ($vista === 'compras_lista') require_once __DIR__ . '/views/compras_lista.php';         // 🌟 Invoca la lista
         elseif ($vista === 'compras_registrar') require_once __DIR__ . '/views/compras_registrar.php'; // 🌟 Invoca el formulario
         elseif ($vista === 'reportes_mensuales') require_once __DIR__ . '/views/reportes_mensuales.php'; // 🌟 Invoca el reporte unificado
-        break;
+        elseif ($vista === 'recetas_lista') require_once __DIR__ . '/views/recetas_lista.php'; // Invoca la interfaz
+    break;
     // ============================================================================
     // 🍳 PANTALLAS DE PRODUCCIÓN KDS: ACCESO LIBRE SEGÚN ESTACIÓN
     // ============================================================================

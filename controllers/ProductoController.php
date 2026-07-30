@@ -13,6 +13,11 @@ class ProductoController {
     public function listar() {
         return $this->modelo->listarProductos();
     }
+    // 🚀 NUEVA FUNCIÓN EXCLUSIVA PARA EL PUNTO DE VENTA (POS)
+    public function listarParaMesero() {
+        // Llama directamente al método filtrado que creamos en tu ProductoModelo
+        return $this->modelo->listarProductosVenta(); 
+    }
 
     // Actualiza este método dentro de tu ProductoController.php
     public function obtenerCategorias() {
@@ -20,6 +25,12 @@ class ProductoController {
         $categoriaCtrl = new CategoriaController();
         return $categoriaCtrl->obtenerCategorias();
     }
+        // 🌟 NUEVO MÉTODO EXCLUSIVO PARA EL POS: Carga el menú de categorías filtrado desde el modelo
+    public function obtenerCategoriasPedido() {
+        // Invoca de forma directa a la función filtrada de tu ProductoModelo que oculta "M. Prima"
+        return $this->modelo->listarCategoriasPedido();
+    }
+
 
     // 🚀 NUEVO MÉTODO OPERATIVO: Expone la lista de proveedores activos a la vista del formulario
     public function obtenerProveedores() {

@@ -25,8 +25,10 @@ if (!$pedidoInfo) {
 
 // 2. Cargamos el catálogo de productos disponibles y sus categorías para las pestañas
 $prodController = new ProductoController();
-$categoriasMenu = $prodController->obtenerCategorias();
-$productosMenu = $prodController->listar(); 
+// 🌟 REEMPLÁZALA EXACTAMENTE POR TU NUEVA COMPUERTA FILTRADA:
+$categoriasMenu = $prodController->obtenerCategoriasPedido();
+// 🌟 REEMPLÁZALA EXACTAMENTE POR ESTA VERSIÓN PARA EL SALÓN:
+$productosMenu = $prodController->listarParaMesero(); 
 
 // 3. Extraemos el detalle actual de lo que ya se ha sumado a esta comanda (Fiel a tus dos tablas de mermas)
 $stmtDet = $db->prepare("SELECT pd.id, pd.pedido_id, pd.producto_id, pd.cantidad, pd.precio_unitario, pd.subtotal, pd.estado, pd.es_mixta, p.nombre as nombre_producto, p.imagen

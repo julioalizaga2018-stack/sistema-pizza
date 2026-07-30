@@ -64,6 +64,10 @@ if (!defined('URL_BASE')) {
         <li>
             <a href="<?php echo URL_BASE; ?>index.php?v=mantenimiento_productos" class="nav-link <?php echo ($vista_actual == 'mantenimiento_productos' || $vista_actual == 'mantenimiento_productos_nuevo') ? 'active' : ''; ?>">📦 Menú y Productos</a>
         </li>
+         <!-- 🌟 NUEVO ENLACE AL CRUD DE MAESTRO DE RECETAS -->
+        <li>
+            <a href="<?php echo URL_BASE; ?>index.php?v=recetas_lista" class="nav-link <?php echo ($vista_actual == 'recetas_lista') ? 'active' : ''; ?>">🍳 Fórmulas Recetas</a>
+        </li>
         <li>
             <a href="<?php echo URL_BASE; ?>index.php?v=mantenimiento_mesas" class="nav-link <?php echo ($vista_actual == 'mantenimiento_mesas') ? 'active' : ''; ?>">🪑 Gestión Mesas</a>
         </li>
