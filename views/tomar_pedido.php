@@ -876,72 +876,76 @@ $msg_success = $_GET['success'] ?? null;
         <button type="button" class="pos-tab-trigger" id="btn-tab-ticket" onclick="cambiarVistaPos('ticket')"><span style="font-size: 18px;">🛒🛒</span> Mi Comanda (<span id="badge-contador-movil"><?php echo count($itemsComanda); ?></span>)</button>
     </div>
     <script>
-        // 🌟 1. BUSCADOR EN TIEMPO REAL (REACTIVO MULTI-FILTRO PERSISTENTE)
-        function ejecutarBusquedaRapidaItem(texto) {
-            const query = texto.toLowerCase().trim();
-            const tarjetas = document.querySelectorAll('.product-item-card');
-            const categoriaActiva = parseInt(document.getElementById('select-categoria-pos').value) || 0;
+      // views/tomar_pedido.php (JavaScript - Parte 1 de 2)
 
-            tarjetas.forEach(card => {
-                if (card.getAttribute('onclick') && card.getAttribute('onclick').includes('abrirModalPizzaMixta')) return;
-                const nombre = card.querySelector('.product-item-title').innerText.toLowerCase();
-                const catId = parseInt(card.getAttribute('data-cat-id')) || 0;
-                const coincideCat = (categoriaActiva === 0 || catId === categoriaActiva);
-                const coincideTexto = (nombre.includes(query));
+// 🌟 1. BUSCADOR EN TIEMPO REAL (REACTIVO MULTI-FILTRO PERSISTENTE)
+function ejecutarBusquedaRapidaItem(texto) {
+    const query = texto.toLowerCase().trim();
+    const tarjetas = document.querySelectorAll('.product-item-card');
+    const categoriaActiva = parseInt(document.getElementById('select-categoria-pos').value) || 0;
 
-                if (coincideCat && coincideTexto) {
-                    card.style.setProperty('display', 'flex', 'important');
-                } else {
-                    card.style.setProperty('display', 'none', 'important');
-                }
-            });
+    tarjetas.forEach(card => {
+        if (card.getAttribute('onclick') && card.getAttribute('onclick').includes('abrirModalPizzaMixta')) return;
+        const nombre = card.querySelector('.product-item-title').innerText.toLowerCase();
+        const catId = parseInt(card.getAttribute('data-cat-id')) || 0;
+        const coincideCat = (categoriaActiva === 0 || catId === categoriaActiva);
+        const coincideTexto = (nombre.includes(query));
+
+        if (coincideCat && coincideTexto) {
+            card.style.setProperty('display', 'flex', 'important');
+        } else {
+            card.style.setProperty('display', 'none', 'important');
         }
+    });
+}
 
-        // 🌟 2. ADICIÓN ASÍNCRONA (RETENCION DE TEXTO EN EL INPUT Y CONGELACIÓN DE SCROLL)
-        function agregarProductoFila(productoId, nombre, precio) {
-            const form = document.getElementById('form-add-item-hidden');
-            if (!form) return;
+// 🌟 2. ADICIÓN ASÍNCRONA (RETENCION DE TEXTO EN EL INPUT Y CONGELACIÓN DE SCROLL)
+function agregarProductoFila(productoId, nombre, precio) {
+    const form = document.getElementById('form-add-item-hidden');
+    if (!form) return;
 
-            const formData = new FormData();
-            formData.append('accion', 'agregar_item');
-            formData.append('pedido_id', form.querySelector('input[name="pedido_id"]').value);
-            formData.append('producto_id', productoId);
-            formData.append('cantidad', '1');
-            formData.append('precio_unitario', precio);
-            formData.append('es_mixta', '0');
+    const formData = new FormData();
+    formData.append('accion', 'agregar_item');
+    formData.append('pedido_id', form.querySelector('input[name="pedido_id"]').value);
+    formData.append('producto_id', productoId);
+    formData.append('cantidad', '1');
+    formData.append('precio_unitario', precio);
+    formData.append('es_mixta', '0');
 
-            const tarjetaPresionada = window.event?.currentTarget;
-            if (tarjetaPresionada) tarjetaPresionada.style.pointerEvents = 'none';
+    const tarjetaPresionada = window.event?.currentTarget;
+    if (tarjetaPresionada) tarjetaPresionada.style.pointerEvents = 'none';
 
-            // Despacho asíncrono controlado en segundo plano
-            fetch(form.action, {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => {
-                    // Almacenamos los estados de scroll y la palabra exacta del input de búsqueda
-                    const scrollMenu = document.querySelector('.menu-products-layout')?.scrollTop || 0;
-                    const scrollTicket = document.querySelector('.ticket-rows-scroll')?.scrollTop || 0;
-                    const textoBuscador = document.getElementById('buscador-productos-pos').value || "";
+    // Despacho asíncrono controlado en segundo plano sin romper el foco
+    fetch(form.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        // Almacenamos los estados de scroll, la categoría del combo y la palabra exacta buscada
+        const scrollMenu = document.querySelector('.menu-products-layout')?.scrollTop || 0;
+        const scrollTicket = document.querySelector('.ticket-rows-scroll')?.scrollTop || 0;
+        const textoBuscador = document.getElementById('buscador-productos-pos').value || "";
+        const categoriaActual = document.getElementById('select-categoria-pos').value || "0";
 
-                    localStorage.setItem('pos_scroll_menu', scrollMenu);
-                    localStorage.setItem('pos_scroll_ticket', scrollTicket);
-                    localStorage.setItem('pos_texto_busqueda', textoBuscador); // Guardamos la memoria de texto
+        localStorage.setItem('pos_scroll_menu', scrollMenu);
+        localStorage.setItem('pos_scroll_ticket', scrollTicket);
+        localStorage.setItem('pos_texto_busqueda', textoBuscador); // Guardamos el texto ingresado
+        localStorage.setItem('jungle_pizza_categoria_activa', categoriaActual); // Fijamos la categoría
+        
+        location.reload();
+    })
+    .catch(error => {
+        console.error("Error en pasarela POS:", error);
+        if (tarjetaPresionada) tarjetaPresionada.style.pointerEvents = 'auto';
+    });
+}
 
-                    location.reload();
-                })
-                .catch(error => {
-                    console.error("Error en pasarela POS:", error);
-                    if (tarjetaPresionada) tarjetaPresionada.style.pointerEvents = 'auto';
-                });
-        }
-        // Envía el nombre del cliente al servidor automáticamente al quitar el cursor del cuadro
+// Envía el nombre del cliente al servidor automáticamente al quitar el cursor del cuadro
 function guardarNombreClienteDinamico(nombre) {
     const formData = new FormData();
     formData.append('accion', 'actualizar_nombre_cliente_ajax');
     formData.append('pedido_id', '<?php echo $pedido_id; ?>');
     formData.append('cliente_nombre', nombre);
-
     fetch('<?php echo URL_BASE; ?>controllers/PedidoController.php', {
         method: 'POST',
         body: formData
@@ -953,179 +957,204 @@ function guardarNombreClienteDinamico(nombre) {
     .catch(error => console.error("Error al guardar el cliente:", error));
 }
 
+// 🌟 3. ACCIONES DE CONTROL EXCLUSIVAS DEL NUEVO MODAL DE CAMBIO DE MESA
+function abrirModalCambioMesa() {
+    document.getElementById('modal-cambio-mesa-wrapper').style.setProperty('display', 'flex', 'important');
+}
+function cerrarModalCambioMesa() { 
+    document.getElementById('modal-cambio-mesa-wrapper').style.setProperty('display', 'none', 'important'); 
+}
 
-        // 🌟 3. ACCIONES DE CONTROL EXCLUSIVAS DEL NUEVO MODAL DE CAMBIO DE MESA
-        function abrirModalCambioMesa() {
-            document.getElementById('modal-cambio-mesa-wrapper').style.setProperty('display', 'flex', 'important');
-        }
-
-        function cerrarModalCambioMesa() {
-            document.getElementById('modal-cambio-mesa-wrapper').style.setProperty('none', 'important');
-        }
-        // 🌟 4. NUEVA FUNCIÓN: ELIMINACIÓN DE BEBIDAS CON CONSERVACIÓN DE TEXTO BUSCADO
-        function solicitarBajaBebida(productoId, nombreBebida) {
-            const motivo = prompt(`❌ REMOVER 1 UNIDAD DE BEBIDA:\n${nombreBebida}\nMotivo obligatorio de la modificación:`);
-            if (motivo) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '<?php echo URL_BASE; ?>controllers/PedidoController.php';
-
-                form.innerHTML = `
+// 🌟 4. NUEVA FUNCIÓN: ELIMINACIÓN DE BEBIDAS CON CONSERVACIÓN DE TEXTO BUSCADO
+function solicitarBajaBebida(productoId, nombreBebida) {
+    const motivo = prompt(`❌ REMOVER 1 UNIDAD DE BEBIDA:\n${nombreBebida}\nMotivo obligatorio de la modificación:`);
+    if (motivo) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '<?php echo URL_BASE; ?>controllers/PedidoController.php';
+        form.innerHTML = `
             <input type="hidden" name="accion" value="quitar_bebida_por_id">
             <input type="hidden" name="pedido_id" value="<?php echo $pedido_id; ?>">
             <input type="hidden" name="producto_id" value="${productoId}">
             <input type="hidden" name="motivo_quitar" value="${motivo}">
         `;
-                document.body.appendChild(form);
+        document.body.appendChild(form);
+        
+        // Retenemos el texto actual también para la acción de remoción de líquidos
+        const textoBuscador = document.getElementById('buscador-productos-pos').value || "";
+        const categoriaActual = document.getElementById('select-categoria-pos').value || "0";
+        localStorage.setItem('pos_texto_busqueda', textoBuscador);
+        localStorage.setItem('jungle_pizza_categoria_activa', categoriaActual);
+        
+        form.submit();
+    }
+}
+// views/tomar_pedido.php (JavaScript - Parte 2 de 2)
 
-                // Retenemos el texto actual también para la acción de remoción de líquidos
-                const textoBuscador = document.getElementById('buscador-productos-pos').value || "";
-                localStorage.setItem('pos_texto_busqueda', textoBuscador);
+// 🌟 5. COMPORTAMIENTOS COMPLEMENTARIOS REPARADOS
+function cambiarVistaPos(vista) {
+    const btnMenu = document.getElementById('btn-tab-menu');
+    const btnTicket = document.getElementById('btn-tab-ticket');
+    if (vista === 'menu') {
+        document.body.classList.remove('ver-ticket-activo');
+        btnMenu.classList.add('active-tab');
+        btnTicket.classList.remove('active-tab');
+    } else {
+        document.body.classList.add('ver-ticket-activo');
+        btnTicket.classList.add('active-tab');
+        btnMenu.classList.remove('active-tab');
+    }
+}
 
-                form.submit();
-            }
+// 🔥 CORRECCIÓN CRÍTICA: Eliminamos el .value = "" que saboteaba el foco del mesero
+function filtrarCatalogoArea(categoriaId, elemento) {
+    const catId = parseInt(categoriaId);
+    
+    // Guardamos la última categoría seleccionada físicamente por el operario
+    localStorage.setItem('jungle_pizza_categoria_activa', catId);
+    
+    if (elemento && elemento.tagName === 'BUTTON') {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('tab-active'));
+        elemento.classList.add('tab-active');
+    }
+    
+    const tarjetasProductos = document.querySelectorAll('.product-item-card');
+    const query = (document.getElementById('buscador-productos-pos').value || "").toLowerCase().trim();
+
+    tarjetasProductos.forEach(card => {
+        if (card.getAttribute('onclick') && card.getAttribute('onclick').includes('abrirModalPizzaMixta')) return;
+        
+        const tarjetaCat = parseInt(card.getAttribute('data-cat-id'));
+        const nombre = card.querySelector('.product-item-title').innerText.toLowerCase();
+        
+        // Ejecuta un filtro cruzado en caliente combinando de forma estricta ambos inputs
+        const coincideCat = (catId === 0 || tarjetaCat === catId);
+        const coincideTexto = (query === "" || nombre.includes(query));
+
+        if (coincideCat && coincideTexto) {
+            card.style.setProperty('display', 'flex', 'important');
+        } else {
+            card.style.setProperty('display', 'none', 'important');
         }
+    });
+}
 
-        // 🌟 5. RESTO DE COMPORTAMIENTOS ORIGINALES INTEGRAOS INTACTOS
-        function cambiarVistaPos(vista) {
-            const btnMenu = document.getElementById('btn-tab-menu');
-            const btnTicket = document.getElementById('btn-tab-ticket');
-            if (vista === 'menu') {
-                document.body.classList.remove('ver-ticket-activo');
-                btnMenu.classList.add('active-tab');
-                btnTicket.classList.remove('active-tab');
-            } else {
-                document.body.classList.add('ver-ticket-activo');
-                btnTicket.classList.add('active-tab');
-                btnMenu.classList.remove('active-tab');
-            }
+function recalcularGranTotalDelivery(montoEnvio) {
+    const subtotalElement = document.getElementById('resumen-subtotal-neto');
+    const totalElement = document.getElementById('resumen-total-final');
+    if (!subtotalElement || !totalElement) return;
+    const subtotalNeto = parseFloat(subtotalElement.getAttribute('data-neto')) || 0;
+    const envioNum = parseFloat(montoEnvio) || 0;
+    totalElement.innerText = "C$ " + (subtotalNeto + envioNum).toFixed(2);
+}
+
+function abrirModalModificadores(detalleId, nombreProducto) {
+    const modal = document.getElementById('modal-agregar-extra-wrapper');
+    const inputDetail = document.getElementById('modal-extra-detalle-id');
+    const titulo = document.getElementById('titulo-modal-extra-dinamico');
+    if (modal && inputDetail) {
+        inputDetail.value = detalleId;
+        if (titulo) titulo.innerText = `Extras para: ${nombreProducto}`;
+        modal.style.display = 'flex';
+    }
+}
+
+function cerrarModalExtras() {
+    document.getElementById('modal-agregar-extra-wrapper').style.display = 'none';
+}
+
+function actualizarPrecioExtraVisual(sel) {
+    const opt = sel.options[sel.selectedIndex];
+    const lbl = document.getElementById('label-precio-extra-dinamico');
+    const hid = document.getElementById('modal-extra-precio-hidden');
+    if (opt && sel.value !== "") {
+        const p = parseFloat(opt.getAttribute('data-precio')) || 0;
+        if (lbl) lbl.innerText = "C$ " + p.toFixed(2);
+        if (hid) hid.value = p.toFixed(2);
+    } else {
+        if (lbl) lbl.innerText = "C$ 0.00";
+        if (hid) hid.value = "0.00";
+    }
+}
+
+function solicitarBajaItem(detalleId, nombreProducto) {
+    const motivo = prompt(`❌ REMOVER DE LA COMANDA:\n${nombreProducto}\nMotivo obligatorio:`);
+    if (motivo) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '<?php echo URL_BASE; ?>controllers/PedidoController.php';
+        form.innerHTML = `<input type="hidden" name="accion" value="quitar_item"><input type="hidden" name="pedido_id" value="<?php echo $pedido_id; ?>"><input type="hidden" name="pedido_detalle_id" value="${detalleId}"><input type="hidden" name="motivo_quitar" value="${motivo}"><input type="hidden" name="fue_servido" value="1">`;
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+function abrirModalPizzaMixta() {
+    const m = document.getElementById('modal-pizza-mixta-wrapper');
+    if (m) m.style.setProperty('display', 'flex', 'important');
+}
+
+function cerrarModalPizzaMixta() {
+    document.getElementById('modal-pizza-mixta-wrapper').style.setProperty('none', 'important');
+}
+
+function ajustarComensales(cambio) {
+    const label = document.getElementById('label-num-personas');
+    if (!label) return;
+    let v = (parseInt(label.innerText) || 1) + cambio;
+    if (v < 1) v = 1;
+    label.innerText = v;
+    const formData = new FormData();
+    formData.append('accion', 'actualizar_comensales_ajax');
+    formData.append('pedido_id', '<?php echo $pedido_id; ?>');
+    formData.append('num_personas', v);
+    fetch('<?php echo URL_BASE; ?>controllers/PedidoController.php', {
+        method: 'POST',
+        body: formData
+    });
+}
+
+// 🌟 6. DOM READY MOTOR DE PERSISTENCIA SIN CONFLICTOS INTERNOS
+document.addEventListener("DOMContentLoaded", function() {
+    const catG = localStorage.getItem('jungle_pizza_categoria_activa');
+    const selC = document.getElementById('select-categoria-pos'); 
+    
+    if (catG !== null && selC) {
+        const catIdGuardada = parseInt(catG);
+        
+        // 🔒 CLAVE: Seteamos el valor físico del combo select inmediatamente
+        selC.value = catIdGuardada; 
+        
+        // Ejecutamos el filtro cruzado inicial pasándole la categoría en memoria
+        filtrarCatalogoArea(catIdGuardada, selC);
+    } else {
+        filtrarCatalogoArea(0, selC);
+    }
+    
+    if (localStorage.getItem('pos_vista_activa') === 'ticket' && window.innerWidth < 600) { 
+        cambiarVistaPos('ticket'); 
+    }
+    
+    // 🔍 RESTAURACIÓN DE TEXTO BUSCADO: Recupera la palabra clave y re-fija el puntero del teclado
+    const textoGuardado = localStorage.getItem('pos_texto_busqueda');
+    if (textoGuardado) {
+        const inputBuscador = document.getElementById('buscador-productos-pos');
+        if (inputBuscador) {
+            inputBuscador.value = textoGuardado;
+            // Forzamos el re-filtrado combinando el texto de vuelta con la categoría ya anclada
+            ejecutarBusquedaRapidaItem(textoGuardado); 
+            inputBuscador.focus(); // Clava el cursor de vuelta en el input para seguir digitando
         }
-
-        function filtrarCatalogoArea(categoriaId, elemento) {
-            const catId = parseInt(categoriaId);
-            document.getElementById('buscador-productos-pos').value = ""; // Limpia al cambiar de categoría principal
-            if (elemento && elemento.tagName === 'BUTTON') {
-                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('tab-active'));
-                elemento.classList.add('tab-active');
-            }
-            const tarjetasProductos = document.querySelectorAll('.product-item-card');
-            tarjetasProductos.forEach(card => {
-                const tarjetaCat = parseInt(card.getAttribute('data-cat-id'));
-                if (catId === 0 || tarjetaCat === catId) {
-                    card.style.setProperty('display', 'flex', 'important');
-                } else {
-                    card.style.setProperty('display', 'none', 'important');
-                }
-            });
-        }
-
-        function recalcularGranTotalDelivery(montoEnvio) {
-            const subtotalElement = document.getElementById('resumen-subtotal-neto');
-            const totalElement = document.getElementById('resumen-total-final');
-            if (!subtotalElement || !totalElement) return;
-            const subtotalNeto = parseFloat(subtotalElement.getAttribute('data-neto')) || 0;
-            const envioNum = parseFloat(montoEnvio) || 0;
-            totalElement.innerText = "C$ " + (subtotalNeto + envioNum).toFixed(2);
-        }
-
-        function abrirModalModificadores(detalleId, nombreProducto) {
-            const modal = document.getElementById('modal-agregar-extra-wrapper');
-            const inputDetail = document.getElementById('modal-extra-detalle-id');
-            const titulo = document.getElementById('titulo-modal-extra-dinamico');
-            if (modal && inputDetail) {
-                inputDetail.value = detalleId;
-                if (titulo) titulo.innerText = `🧀 Extras para: ${nombreProducto}`;
-                modal.style.display = 'flex';
-            }
-        }
-
-        function cerrarModalExtras() {
-            document.getElementById('modal-agregar-extra-wrapper').style.display = 'none';
-        }
-
-        function actualizarPrecioExtraVisual(sel) {
-            const opt = sel.options[sel.selectedIndex];
-            const lbl = document.getElementById('label-precio-extra-dinamico');
-            const hid = document.getElementById('modal-extra-precio-hidden');
-            if (opt && sel.value !== "") {
-                const p = parseFloat(opt.getAttribute('data-precio')) || 0;
-                if (lbl) lbl.innerText = "C$ " + p.toFixed(2);
-                if (hid) hid.value = p.toFixed(2);
-            } else {
-                if (lbl) lbl.innerText = "C$ 0.00";
-                if (hid) hid.value = "0.00";
-            }
-        }
-
-        function solicitarBajaItem(detalleId, nombreProducto) {
-            const motivo = prompt(`❌ REMOVER DE LA COMANDA:\n${nombreProducto}\nMotivo obligatorio:`);
-            if (motivo) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '<?php echo URL_BASE; ?>controllers/PedidoController.php';
-                form.innerHTML = `<input type="hidden" name="accion" value="quitar_item"><input type="hidden" name="pedido_id" value="<?php echo $pedido_id; ?>"><input type="hidden" name="pedido_detalle_id" value="${detalleId}"><input type="hidden" name="motivo_quitar" value="${motivo}"><input type="hidden" name="fue_servido" value="1">`;
-                document.body.appendChild(form);
-                form.submit();
-            }
-        }
-
-        function abrirModalPizzaMixta() {
-            const m = document.getElementById('modal-pizza-mixta-wrapper');
-            if (m) m.style.setProperty('display', 'flex', 'important');
-        }
-
-        function cerrarModalPizzaMixta() {
-            document.getElementById('modal-pizza-mixta-wrapper').style.setProperty('none', 'important');
-        }
-
-        function ajustarComensales(cambio) {
-            const label = document.getElementById('label-num-personas');
-            if (!label) return;
-            let v = (parseInt(label.innerText) || 1) + cambio;
-            if (v < 1) v = 1;
-            label.innerText = v;
-            const formData = new FormData();
-            formData.append('accion', 'actualizar_comensales_ajax');
-            formData.append('pedido_id', '<?php echo $pedido_id; ?>');
-            formData.append('num_personas', v);
-            fetch('<?php echo URL_BASE; ?>controllers/PedidoController.php', {
-                method: 'POST',
-                body: formData
-            });
-        }
-
-        // 🌟 6. DOM READY: ENGINE DE RESTAURACIÓN COMPLETO (TEXTOS, FILTROS Y SCROLL)
-        document.addEventListener("DOMContentLoaded", function() {
-            const catG = localStorage.getItem('jungle_pizza_categoria_activa');
-            const selC = document.querySelector('.category-select-wrapper select');
-            if (catG !== null && selC) {
-                selC.value = parseInt(catG);
-                filtrarCatalogoArea(parseInt(catG), selC);
-            }
-            if (localStorage.getItem('pos_vista_activa') === 'ticket' && window.innerWidth < 600) {
-                cambiarVistaPos('ticket');
-            }
-
-            // RESTAURACIÓN DE TEXTO: Recupera la palabra escrita por el mesero y re-aplica el filtro de inmediato
-            const textoGuardado = localStorage.getItem('pos_texto_busqueda');
-            if (textoGuardado) {
-                const inputBuscador = document.getElementById('buscador-productos-pos');
-                if (inputBuscador) {
-                    inputBuscador.value = textoGuardado;
-                    ejecutarBusquedaRapidaItem(textoGuardado); // Disparamos el filtrado al instante
-                    inputBuscador.focus(); // Fijamos el cursor en el input
-                }
-                localStorage.removeItem('pos_texto_busqueda'); // Limpiamos caché limpia para el próximo producto
-            }
-
-            // Restauración exacta de posiciones de scroll (Congelación táctil en rejilla y comanda)
-            const sMenu = localStorage.getItem('pos_scroll_menu');
-            const sTicket = localStorage.getItem('pos_scroll_ticket');
-            if (sMenu && document.querySelector('.menu-products-layout')) document.querySelector('.menu-products-layout').scrollTop = parseInt(sMenu);
-            if (sTicket && document.querySelector('.ticket-rows-scroll')) document.querySelector('.ticket-rows-scroll').scrollTop = parseInt(sTicket);
-        });
-    </script>
-    <script src="<?php echo URL_BASE; ?>public/js/main.js"></script>
+        localStorage.removeItem('pos_texto_busqueda'); // Limpieza higiénica de caché
+    }
+    
+    // Restauración exacta de posiciones de scroll (Congelación total)
+    const sMenu = localStorage.getItem('pos_scroll_menu');
+    const sTicket = localStorage.getItem('pos_scroll_ticket');
+    if(sMenu && document.querySelector('.menu-products-layout')) document.querySelector('.menu-products-layout').scrollTop = parseInt(sMenu);
+    if(sTicket && document.querySelector('.ticket-rows-scroll')) document.querySelector('.ticket-rows-scroll').scrollTop = parseInt(sTicket);
+});
+</script>
+<script src="<?php echo URL_BASE; ?>public/js/main.js"></script>
 </body>
-
 </html>
