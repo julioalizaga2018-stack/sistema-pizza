@@ -16,6 +16,14 @@ class CajaModelo extends Conexion {
         $stmt->execute(['usuario_id' => $usuario_id]);
         return $stmt->fetch();
     }
+    // 🌟 NUEVO MÉTODO GLOBAL: Busca si el local ya tiene un turno abierto, independientemente del usuario
+public function obtenerTurnoActivoGeneral() {
+    $sql = "SELECT * FROM caja_turnos WHERE estado = 'abierta' LIMIT 1";
+    $stmt = $this->db->prepare($sql);
+    $stmt->execute();
+    return $stmt->fetch(); // Retorna el turno activo de la pizzería si existe
+}
+
 
     // APERTURA: Inicia el turno con el fondo de caja inyectado en 'monto_inicial'
     public function abrirCaja($usuario_id, $monto_inicial) {

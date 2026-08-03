@@ -31,58 +31,82 @@ $itemsComanda = $stmtDet->fetchAll(PDO::FETCH_ASSOC);
 <head>
     <meta charset="UTF-8">
     <title>Precuenta_Ticket_#<?php echo $pedido_id; ?></title>
-    <style>
-               /* ==========================================================================
-           🎨 TIPOGRAFÍA SANS-SERIF ULTRA-COMPACTA: MÁXIMO AHORRO DE PAPEL TÉRMICO
-           ========================================================================== */
-        body { 
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-            font-size: 14.5px; 
-            font-weight: 500; /* Letras definidas y esbeltas */
-            letter-spacing: -0.4px; /* 🌟 Junta las letras eliminando aire horizontal */
-            line-height: 1.25; /* 🌟 Reduce el espacio vertical entre líneas de texto */
-            color: #000000; 
-            background: #ffffff; 
-            margin: 0; 
-            padding: 6px; 
-            width: 275px; 
-        }
-        .text-center { text-align: center; }
-        .text-right { text-align: right; }
-        
-        /* Divisor compacto de alta densidad */
-        .divider { 
-            border-top: 2px dashed #000000; 
-            margin: 8px 0; 
-        }
-        
-        .ticket-table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            font-size: 13.5px; 
-            letter-spacing: -0.4px; 
-        }
-        .ticket-table td { 
-            padding: 3px 0; /* 🌟 Encoge las filas para que el ticket sea más corto */
-            vertical-align: top; 
-        }
-        .extra-line { 
-            font-size: 11.5px; 
-            padding-left: 8px !important; 
-        }
-        
-        .totals-section { 
-            font-weight: 700; 
-            margin-top: 6px; 
-            font-size: 14px; 
-        }
-        
-        @media print {
-            .no-print { display: none !important; }
-            body { padding: 0; margin: 0; width: 100%; }
-        }
+   <style>
+/* 
+==========================================================================
+🎨🎨 TIPOGRAFÍA SANS-SERIF ULTRA-COMPACTA: MÁXIMO AHORRO DE PAPEL TÉRMICO
+========================================================================== */
+body { 
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+    font-size: 14.5px; 
+    font-weight: 500; /* Letras definidas y esbeltas */
+    letter-spacing: -0.4px; /* 🌟🌟 Junta las letras eliminando aire horizontal */
+    line-height: 1.25; /* 🌟🌟 Reduce el espacio vertical entre líneas de texto */
+    color: #000000; 
+    background: #ffffff; 
+    margin: 0; 
+    padding: 6px; 
+    width: 275px; 
+    height: auto !important; /* 🌟 Evita restricciones físicas de altura */
+}
 
-    </style>
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+
+/* Divisor compacto de alta densidad */
+.divider { 
+    border-top: 2px dashed #000000; 
+    margin: 8px 0; 
+}
+
+.ticket-table { 
+    width: 100%; 
+    border-collapse: collapse; 
+    font-size: 13.5px; 
+    letter-spacing: -0.4px; 
+}
+
+.ticket-table td { 
+    padding: 3px 0; /* 🌟🌟 Encoge las filas para que el ticket sea más corto */
+    vertical-align: top; 
+}
+
+.extra-line { 
+    font-size: 11.5px; 
+    padding-left: 8px !important; 
+}
+
+.totals-section { 
+    font-weight: 700; 
+    margin-top: 6px; 
+    font-size: 14px; 
+}
+
+/* 
+==========================================================================
+🖨🖨 CONFIGURACIÓN DE IMPRESIÓN CORREGIDA (ROLLO CONTINUO SIN FIN)
+========================================================================== */
+@media print {
+    .no-print { 
+        display: none !important; 
+    }
+    
+    html, body { 
+        height: auto !important;     /* 🔥 Permite que el ticket crezca dinámicamente */
+        overflow: visible !important; /* 🔥 Quita cualquier barra de scroll o corte en impresión */
+        padding: 0; 
+        margin: 0; 
+        width: 100%; 
+    }
+    
+    /* 🌟 Evita que un platillo o un extra se parta por la mitad si coincide con un salto de página */
+    tr {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+}
+</style>
+
 </head>
 <body>
 

@@ -97,13 +97,16 @@ $usuarioCtrl = new UsuarioController();
 // 6. Enrutamiento lógico centralizado por bloques con discriminación de roles
 switch ($vista) {
 
+    // Cambia esto en tu index.php principal:
     case 'login':
         if (isset($_SESSION['usuario_id']) && !$usuarioCtrl->esSistemaNuevo()) {
-            header('Location: index.php?v=catalogo');
+            // CORREGIDO: Cambiamos 'catalogo' por 'dashboard'
+            header('Location: index.php?v=dashboard');
             exit;
         }
         require_once __DIR__ . '/views/login.php';
         break;
+
 
     case 'catalogo':
         if (!isset($_SESSION['usuario_id'])) {
@@ -176,57 +179,76 @@ switch ($vista) {
 
 
 
-    // ============================================================================
+                  // ============================================================================
     // 🍕 MÓDULOS OPERATIVOS: ACCESO COMBINADO PARA SUPERADMIN (1), ADMIN (2) Y SUPERVISOR (3)
     // ============================================================================
 
+    // 🅰️ GRUPO A: Módulos Administrativos y de Configuración (Libres de candado de apertura de caja)
     case 'mantenimiento_productos':
     case 'mantenimiento_productos_nuevo':
     case 'mantenimiento_categorias':
     case 'mantenimiento_areas':
-    case 'mantenimiento_mesas':
-    case 'proveedores': // 🌟 RUTA NUEVA: Módulo de Proveedores agregado
-    case 'inventario_ajustes': // 🌟 RUTA NUEVA: Módulo de Kardex y Ajustes de Stock agregado
-    case 'gestion_caja': // 🌟 RUTA NUEVA: Módulo de Apertura, Arqueo y Cierre de Caja
-    case 'cobranza_lista':    // 🌟 RUTA NUEVA: Cola de pedidos pendientes de cobro
-    case 'cobranza_facturar': // 🌟 RUTA NUEVA: Formulario de cobro mixto, propina y descuento
-    case 'cobranza_historial': // 🌟 INTERCEPCIÓN QUIRÚRGICA: Historial de Facturas
-    case 'ventas_productos': // 🌟 RUTA NUEVA: Módulo Analítico de Productos Vendidos
-    case 'compras_lista':     // 🌟 RUTA NUEVA: Historial de facturas de compras ingresadas
-    case 'compras_registrar': // 🌟 RUTA NUEVA: Formulario dinámico para abastecer insumos
-    case 'reportes_mensuales': // 🌟 RUTA NUEVA: Balance de Ventas y Compras Mensuales
-    case 'recetas_lista': // 🌟 RUTA NUEVA: Panel CRUD maestro de Recetas e Ingredientes
+    case 'mantenimiento_mesas': // 🌟 Dejado aquí para el mantenimiento técnico de ID de mesas
+    case 'proveedores': 
+    case 'inventario_ajustes': 
+    case 'gestion_caja': 
+    case 'cobranza_historial': 
+    case 'ventas_productos': 
+    case 'compras_lista':     
+    case 'compras_registrar': 
+    case 'reportes_mensuales': 
+    case 'recetas_lista': 
     
         if (!isset($_SESSION['usuario_id']) || !isset($_SESSION['rol_id'])) {
             header('Location: index.php?v=login');
             exit;
         }
 
-        // 🚀 PERMISO SEGURO: Permitimos el paso si el ID es 1, 2 o 3 (Tu Supervisor está incluido).
         $rolSesion = (int)$_SESSION['rol_id'];
         if ($rolSesion !== 1 && $rolSesion !== 2 && $rolSesion !== 3) {
             header('Location: index.php?v=dashboard');
             exit;
         }
 
-        // Enrutamos de forma dinámica al archivo físico correspondiente
+        // Renderizado directo de vistas administrativas (Sincronizado con tus archivos reales)
         if ($vista === 'mantenimiento_productos') require_once __DIR__ . '/views/lista-productos.php';
         elseif ($vista === 'mantenimiento_productos_nuevo') require_once __DIR__ . '/views/productos.php';
         elseif ($vista === 'mantenimiento_categories' || $vista === 'mantenimiento_categorias') require_once __DIR__ . '/views/categorias.php';
         elseif ($vista === 'mantenimiento_areas') require_once __DIR__ . '/views/areas.php';
-        elseif ($vista === 'mantenimiento_mesas') require_once __DIR__ . '/views/mesas.php';
-        elseif ($vista === 'proveedores') require_once __DIR__ . '/views/proveedores.php'; // 🌟 Invoca tu nueva vista
-        elseif ($vista === 'inventario_ajustes') require_once __DIR__ . '/views/inventario_ajustes.php'; // 🌟 Invoca tu nueva vista de Kardex
-        elseif ($vista === 'gestion_caja') require_once __DIR__ . '/views/gestion_caja.php'; // 🌟 Invoca tu nueva vista de Caja
-        elseif ($vista === 'cobranza_lista') require_once __DIR__ . '/views/cobranza_lista.php';       // 🌟 Carga la cola
-        elseif ($vista === 'cobranza_facturar') require_once __DIR__ . '/views/cobranza_facturar.php'; // 🌟 Carga la calculadora
-        elseif ($vista === 'cobranza_historial') require_once __DIR__ . '/views/cobranza_historial.php'; // 🌟 Invoca tu archivo físico
-        elseif ($vista === 'ventas_productos') require_once __DIR__ . '/views/ventas_productos.php'; // 🌟 Invoca tu nuevo reporte
-        elseif ($vista === 'compras_lista') require_once __DIR__ . '/views/compras_lista.php';         // 🌟 Invoca la lista
-        elseif ($vista === 'compras_registrar') require_once __DIR__ . '/views/compras_registrar.php'; // 🌟 Invoca el formulario
-        elseif ($vista === 'reportes_mensuales') require_once __DIR__ . '/views/reportes_mensuales.php'; // 🌟 Invoca el reporte unificado
-        elseif ($vista === 'recetas_lista') require_once __DIR__ . '/views/recetas_lista.php'; // Invoca la interfaz
+        elseif ($vista === 'mantenimiento_mesas') require_once __DIR__ . '/views/mesas.php'; // CRUD de configuración
+        elseif ($vista === 'proveedores') require_once __DIR__ . '/views/proveedores.php'; 
+        elseif ($vista === 'inventario_ajustes') require_once __DIR__ . '/views/inventario_ajustes.php'; 
+        elseif ($vista === 'gestion_caja') require_once __DIR__ . '/views/gestion_caja.php'; 
+        elseif ($vista === 'cobranza_historial') require_once __DIR__ . '/views/cobranza_historial.php'; 
+        elseif ($vista === 'ventas_productos') require_once __DIR__ . '/views/ventas_productos.php'; 
+        elseif ($vista === 'compras_lista') require_once __DIR__ . '/views/compras_lista.php';         
+        elseif ($vista === 'compras_registrar') require_once __DIR__ . '/views/compras_registrar.php'; 
+        elseif ($vista === 'reportes_mensuales') require_once __DIR__ . '/views/reportes_mensuales.php'; 
+        elseif ($vista === 'recetas_lista') require_once __DIR__ . '/views/recetas_lista.php'; 
     break;
+
+   // ============================================================================
+// 🅱️ GRUPO B: Módulos Operativos de Salón y Caja (Acceso Libre por Enrutador)
+// ============================================================================
+case 'mesas':         
+case 'tomar_pedido':    
+case 'cobranza_lista':    
+case 'cobranza_facturar': 
+
+    if (!isset($_SESSION['usuario_id']) || !isset($_SESSION['rol_id'])) {
+        header('Location: index.php?v=login');
+        exit;
+    }
+
+    // Renderizado Directo Sin Interrupciones
+    if ($vista === 'mesas') require_once __DIR__ . '/views/mesas_salon.php'; 
+    elseif ($vista === 'tomar_pedido') require_once __DIR__ . '/views/tomar_pedido.php'; 
+    elseif ($vista === 'cobranza_lista') require_once __DIR__ . '/views/cobranza_lista.php';       
+    elseif ($vista === 'cobranza_facturar') require_once __DIR__ . '/views/cobranza_facturar.php'; 
+break;
+
+
+
     // ============================================================================
     // 🍳 PANTALLAS DE PRODUCCIÓN KDS: ACCESO LIBRE SEGÚN ESTACIÓN
     // ============================================================================

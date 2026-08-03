@@ -17,6 +17,9 @@ $msg_success = $_GET['success'] ?? null;
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <link rel="manifest" href="<?php echo URL_BASE; ?>manifest.json">
+
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $sistemaNuevo ? 'Registro Inicial' : 'Login'; ?> - Jungle Pizza</title>
@@ -90,6 +93,18 @@ $msg_success = $_GET['success'] ?? null;
             <?php endif; ?>
         </div>
     </div>
+   <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      // Usamos la URL base de PHP directamente en JavaScript
+      const urlBase = "<?php echo URL_BASE; ?>";
+      
+      navigator.serviceWorker.register(urlBase + 'sw.js')
+        .then(reg => console.log('Service Worker de Jungle Pizza activo en: ', reg.scope))
+        .catch(err => console.error('Error al registrar Service Worker:', err));
+    });
+  }
+</script>
 
 </body>
 </html>

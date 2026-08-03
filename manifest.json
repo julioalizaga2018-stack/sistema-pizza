@@ -1,0 +1,22 @@
+{
+  "short_name": "JunglePizza",
+  "name": "Jungle Pizza - Sistema ERP Gastronómico",
+  "icons": [
+    {
+      "src": "assets/img/logo-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/img/logo-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "index.php",
+  "background_color": "#2C3E50",
+  "theme_color": "#27AE60",
+  "display": "standalone",
+  "orientation": "portrait-primary"
+}

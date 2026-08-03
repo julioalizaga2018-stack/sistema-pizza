@@ -33,15 +33,19 @@ class SalonModelo extends Conexion {
     // ============================================================================
     // METODOS PARA MESAS
     // ============================================================================
-    public function listarMesasConAreas() {
-        $sql = "SELECT m.*, a.nombre as nombre_area 
-                FROM mesas m 
-                INNER JOIN areas a ON m.area_id = a.id 
-                WHERE m.deleted_at IS NULL AND a.deleted_at IS NULL
-                ORDER BY a.nombre ASC, m.numero_mesa ASC";
-        $stmt = $this->db->query($sql);
-        return $stmt->fetchAll();
-    }
+   public function listarMesasConAreas() {
+    // 🌟 SQL BLINDADO: Trae las mesas y el nombre del mesero que tiene el pedido activo en el salón
+    $sql = "SELECT m.*, a.nombre as nombre_area, u.nombre as nombre_mesero 
+            FROM mesas m 
+            INNER JOIN areas a ON m.area_id = a.id 
+            LEFT JOIN pedidos p ON p.mesa_id = m.id AND p.estado IN ('pendiente', 'cocina', 'horno', 'bar')
+            LEFT JOIN usuarios u ON p.usuario_id = u.id
+            WHERE m.deleted_at IS NULL AND a.deleted_at IS NULL
+            ORDER BY a.nombre ASC, m.numero_mesa ASC";
+            
+    $stmt = $this->db->query($sql);
+    return $stmt->fetchAll();
+}
 
     public function registrarMesa($area_id, $numero_mesa, $capacidad) {
         // Validación contra duplicados de mesa en una misma área

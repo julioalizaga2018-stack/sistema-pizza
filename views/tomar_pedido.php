@@ -1,6 +1,5 @@
 <?php
-// views/tomar_pedido.php (Parte 1 de 4 - Arquitectura Jungle POS)
-
+// views/tomar_pedido.php (Parte 1 de 8 - Arquitectura Jungle POS Ultra)
 // 1. Validaciones e instancias de los datos del pedido actual
 require_once __DIR__ . '/../models/PedidoModelo.php';
 require_once __DIR__ . '/../controllers/ProductoController.php';
@@ -8,13 +7,14 @@ require_once __DIR__ . '/../controllers/ProductoController.php';
 $pedido_id = intval($_GET['pedido_id'] ?? 0);
 $db = (new Conexion())->conectar();
 
-// Amarre relacional para extraer el mesero y la mesa física actual
-$stmtPed = $db->prepare("SELECT p.*, m.numero_mesa, a.nombre as nombre_area, u.nombre as nombre_mesero 
+// views/tomar_pedido.php (Modificación en la cabecera superior)
+$stmtPed = $db->prepare("SELECT p.*, m.numero_mesa, a.nombre as nombre_area, u.nombre as nombre_mesero, p.cliente_nombre -- 👈 Agregado de forma segura aquí
                          FROM pedidos p 
                          LEFT JOIN mesas m ON p.mesa_id = m.id
                          LEFT JOIN areas a ON m.area_id = a.id
-                         INNER JOIN usuarios u ON p.usuario_id = u.id 
+                         INNER JOIN usuarios u ON p.usuario_id = u.id
                          WHERE p.id = :id LIMIT 1");
+
 $stmtPed->execute(['id' => $pedido_id]);
 $pedidoInfo = $stmtPed->fetch();
 
@@ -25,13 +25,11 @@ if (!$pedidoInfo) {
 
 // 2. Cargamos el catálogo de productos disponibles y sus categorías para las pestañas
 $prodController = new ProductoController();
-// 🌟 REEMPLÁZALA EXACTAMENTE POR TU NUEVA COMPUERTA FILTRADA:
 $categoriasMenu = $prodController->obtenerCategoriasPedido();
-// 🌟 REEMPLÁZALA EXACTAMENTE POR ESTA VERSIÓN PARA EL SALÓN:
-$productosMenu = $prodController->listarParaMesero(); 
+$productosMenu = $prodController->listarParaMesero();
 
-// 3. Extraemos el detalle actual de lo que ya se ha sumado a esta comanda (Fiel a tus dos tablas de mermas)
-$stmtDet = $db->prepare("SELECT pd.id, pd.pedido_id, pd.producto_id, pd.cantidad, pd.precio_unitario, pd.subtotal, pd.estado, pd.es_mixta, p.nombre as nombre_producto, p.imagen
+// 3. Extraemos el detalle actual agregando p.categoria_id para agrupar las bebidas de forma exacta
+$stmtDet = $db->prepare("SELECT pd.id, pd.pedido_id, pd.producto_id, pd.cantidad, pd.precio_unitario, pd.subtotal, pd.estado, pd.es_mixta, p.nombre as nombre_producto, p.imagen, p.categoria_id
                          FROM pedido_detalles pd 
                          INNER JOIN productos p ON pd.producto_id = p.id
                          WHERE pd.pedido_id = :pedido_id AND pd.estado NOT IN ('quitado_antes', 'quitado_despues')");
@@ -44,190 +42,383 @@ $host = $_SERVER['HTTP_HOST'];
 if (!defined('URL_BASE')) {
     define('URL_BASE', ($host === 'localhost') ? $protocol . $host . "/pizzeria/" : $protocol . $host . "/");
 }
-
 $msg_error = $_GET['error'] ?? null;
 $msg_success = $_GET['success'] ?? null;
 ?>
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Punto de Venta Táctil - Jungle Pizza</title>
     <link rel="stylesheet" href="<?php echo URL_BASE; ?>public/css/base.css">
     <link rel="stylesheet" href="<?php echo URL_BASE; ?>public/css/estilos.css">
-    
     <style>
-    /* ==========================================================================
-       🚀 CORE LAYOUT: EXPANSIÓN VERTICAL MÁXIMA DE LA PANTALLA TÁCTIL
-       ========================================================================== */
-    .pos-grid-container {
-        display: grid !important;
-        grid-template-columns: 1fr;
-        gap: 20px;
-        margin-top: 15px;
-        width: 100%;
-        height: calc(100vh - 140px) !important; /* 🌟 Corrección del operador menos (-) */
-        min-height: 650px;
-    }
-    .pos-card {
-        background: #ffffff;
-        border-radius: 12px;
-        box-shadow: 0 4px 15px rgba(27, 67, 50, 0.05);
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        height: 100% !important; /* 🌟 Alto elástico hasta abajo */
-        box-sizing: border-box;
-    }
-    
-    /* ==========================================================================
-       📁 SECCIÓN IZQUIERDA: CATÁLOGO DE PRODUCTOS EXPANSIBLE
-       ========================================================================== */
-    .category-select-wrapper {
-        margin-bottom: 15px;
-        width: 100%;
-    }
-    .menu-products-layout {
-        display: grid !important;
-        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important; /* Tarjetas robustas */
-        gap: 15px;
-        overflow-y: auto;
-        flex: 1;
-        padding-right: 5px;
-    }
-    .product-item-card {
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 10px;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        cursor: pointer;
-        transition: transform 0.1s, border-color 0.2s;
-        position: relative;
-        height: 240px !important; /* 🌟 Mayor elevación vertical */
-    }
-    .product-item-card:active {
-        transform: scale(0.96);
-    }
-    .product-item-card img {
-        width: 100%;
-        height: 130px !important; /* Imagen de gaseosa/pizza imponente */
-        object-fit: contain !important;
-        background: #ffffff;
-        padding: 5px;
-        box-sizing: border-box;
-    }
-    .product-body-desc {
-        padding: 10px;
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-    }
-    .product-item-title {
-        font-size: 14px !important;
-        font-weight: 700;
-        color: #1e293b;
-        line-height: 1.3;
-        margin-bottom: 4px;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-    }
-    .product-item-price {
-        font-size: 15px !important;
-        font-weight: 800;
-        color: var(--naranja-pizza, #e67e22);
-        margin-top: auto;
-    }
+        /* ==========================================================================
+   🚀🚀 CORE LAYOUT: DISEÑO ELÁSTICO ADAPTATIVO JUNGLE POS ULTRA
+   ========================================================================== */
+        .pos-grid-container {
+            display: grid !important;
+            grid-template-columns: 1fr;
+            /* Por defecto 1 columna para pantallas pequeñas */
+            gap: 15px;
+            margin-top: 15px;
+            width: 100%;
+            height: calc(100vh - 140px) !important;
+            min-height: 550px;
+            box-sizing: border-box;
+        }
 
-    /* ==========================================================================
-       📋 SECCIÓN DERECHA: DESGLOSE DE TICKET (COMANDA INDUSTRIAL)
-       ========================================================================== */
-    .comanda-ticket-wrapper {
-        display: flex;
-        flex-direction: column;
-        height: 100% !important;
-        justify-content: space-between;
-    }
-    .ticket-header-info {
-        padding-bottom: 12px;
-        border-bottom: 1px dashed #cbd5e1;
-        margin-bottom: 12px;
-        font-size: 13px;
-    }
-    .ticket-rows-scroll {
-        flex: 1 !important;
-        overflow-y: auto !important;
-        padding-right: 5px;
-        max-height: calc(100% - 180px) !important; /* Scroll interno inteligente */
-    }
-    .ticket-item-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: start;
-        padding: 10px 0;
-        border-bottom: 1px solid #f1f5f9;
-        font-size: 14px;
-    }
-    .action-row-buttons {
-        display: flex;
-        gap: 5px;
-        margin-top: 6px;
-    }
-    .btn-mini-pos {
-        border: none;
-        padding: 4px 8px;
-        font-size: 11px;
-        font-weight: bold;
-        border-radius: 4px;
-        cursor: pointer;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-    }
-    .btn-mini-extra { background: #fff3cd; color: #856404; }
-    .btn-mini-delete { background: #ffe3e3; color: #c92a2a; }
-    
-    .ticket-summary-totals {
-        background: #f8fafc;
-        padding: 14px;
-        border-radius: 8px;
-        margin-top: auto; /* Anclado abajo */
-        border: 1px solid #e2e8f0;
-        font-size: 13px;
-    }
-    .summary-flex-line {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 6px;
-    }
-    .summary-total-bold {
-        border-top: 2px dashed #cbd5e1;
-        padding-top: 8px;
-        font-size: 18px !important;
-        font-weight: 800;
-        color: var(--verde-oscuro, #1b4332);
-        margin-bottom: 0;
-    }
-    .alert { padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; font-weight: 500; }
-    .alert-error { background: #ffe3e3; color: #c92a2a; }
-    .alert-success { background: #ebfbee; color: #2b8a3e; }
-    .form-control { width: 100% !important; padding: 10px !important; border: 2px solid #e2e8f0 !important; border-radius: 8px !important; box-sizing: border-box !important; }
+        /* views/tomar_pedido.php (Parte 2 de 8) */
+        .pos-card {
+            background: #ffffff;
+            border-radius: 14px;
+            box-shadow: 0 4px 20px rgba(27, 67, 50, 0.06);
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            height: 100% !important;
+            box-sizing: border-box;
+            border: 1px solid #e2e8f0;
+        }
 
-    @media (min-width: 992px) {
-        .pos-grid-container { grid-template-columns: 1fr 380px !important; } /* Reparto de anchos */
-    }
+        .category-select-wrapper {
+            margin-bottom: 12px;
+            width: 100%;
+        }
+
+        .category-select-wrapper select {
+            padding: 14px !important;
+            font-size: 16px !important;
+            border-radius: 10px !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03) !important;
+        }
+
+        .menu-products-layout {
+            display: grid !important;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            overflow-y: auto;
+            flex: 1;
+            padding-right: 5px;
+        }
+
+        .product-item-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            cursor: pointer;
+            transition: transform 0.1s ease, border-color 0.2s, box-shadow 0.2s;
+            position: relative;
+            height: 210px !important;
+        }
+
+        .product-item-card:active {
+            transform: scale(0.96);
+            background: #f1f5f9;
+        }
+
+        .product-item-card img {
+            width: 100%;
+            height: 110px !important;
+            object-fit: contain !important;
+            background: #ffffff;
+            padding: 6px;
+            box-sizing: border-box;
+            border-bottom: 1px solid #edf2f7;
+        }
+
+        .product-body-desc {
+            padding: 10px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .product-item-title {
+            font-size: 13px !important;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.3;
+            margin-bottom: 4px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .product-item-price {
+            font-size: 14px !important;
+            font-weight: 800;
+            color: #e67e22;
+            margin-top: auto;
+        }
+
+        .comanda-ticket-wrapper {
+            display: flex;
+            flex-direction: column;
+            height: 100% !important;
+            justify-content: space-between;
+        }
+
+        .ticket-header-info {
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #cbd5e1;
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
+
+        .ticket-rows-scroll {
+            flex: 1 !important;
+            overflow-y: auto !important;
+            padding-right: 5px;
+            max-height: calc(100% - 210px) !important;
+        }
+
+        .ticket-item-row {
+            font-size: 14px;
+        }
+
+        .action-row-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .btn-mini-pos {
+            border: none;
+            padding: 8px 12px;
+            font-size: 12px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+        }
+
+        .btn-mini-extra {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+
+        .btn-mini-delete {
+            background: #ffe3e3;
+            color: #c92a2a;
+            border: 1px solid #fdbfbf;
+        }
+
+        .ticket-summary-totals {
+            background: #f8fafc;
+            padding: 14px;
+            border-radius: 10px;
+            margin-top: auto;
+            border: 1px solid #e2e8f0;
+            font-size: 13px;
+        }
+
+        .summary-flex-line {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+
+        .summary-total-bold {
+            border-top: 2px dashed #cbd5e1;
+            padding-top: 8px;
+            font-size: 19px !important;
+            font-weight: 800;
+            color: #1b4332;
+            margin-bottom: 0;
+        }
+
+        .alert {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .alert-error {
+            background: #ffe3e3;
+            color: #c92a2a;
+            border: 1px solid #fdbfbf;
+        }
+
+        .alert-success {
+            background: #ebfbee;
+            color: #2b8a3e;
+            border: 1px solid #c3e6cb;
+        }
+
+        .form-control {
+            width: 100% !important;
+            padding: 12px !important;
+            border: 2px solid #e2e8f0 !important;
+            border-radius: 8px !important;
+            box-sizing: border-box !important;
+        }
+
+        @media (min-width: 600px) and (max-width: 1024px) {
+            .pos-grid-container {
+                grid-template-columns: 1fr 340px !important;
+                gap: 12px;
+            }
+
+            .menu-products-layout {
+                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+            }
+
+            .product-item-card {
+                height: 190px !important;
+            }
+
+            .product-item-card img {
+                height: 95px !important;
+            }
+        }
+
+        @media (min-width: 1025px) {
+            .pos-grid-container {
+                grid-template-columns: 1fr 420px !important;
+                gap: 20px;
+            }
+
+            .menu-products-layout {
+                grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)) !important;
+            }
+
+            .product-item-card:hover {
+                border-color: #27AE60;
+                box-shadow: 0 6px 15px rgba(39, 174, 96, 0.12);
+                transform: translateY(-2px);
+            }
+
+            .mobile-pos-nav {
+                display: none !important;
+            }
+        }
+
+        @media (max-width: 599px) {
+            body::after {
+                content: "";
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                height: 65px;
+                background: #ffffff;
+                box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.06);
+                z-index: 99998;
+            }
+
+            .pos-grid-container {
+                grid-template-columns: 1fr !important;
+                height: calc(100vh - 150px) !important;
+                margin-bottom: 75px;
+            }
+
+            .pos-grid-container .pos-card:last-child {
+                display: none !important;
+            }
+
+            body.ver-ticket-activo .pos-grid-container .pos-card:first-child {
+                display: none !important;
+            }
+
+            body.ver-ticket-activo .pos-grid-container .pos-card:last-child {
+                display: flex !important;
+                height: 100% !important;
+                overflow-y: auto !important;
+            }
+
+            body.ver-ticket-activo .comanda-ticket-wrapper {
+                height: auto !important;
+                display: block !important;
+            }
+
+            .ticket-rows-scroll {
+                flex: none !important;
+                max-height: none !important;
+                overflow-y: visible !important;
+                margin-bottom: 15px;
+            }
+
+            .ticket-summary-totals {
+                margin-top: 25px !important;
+                position: relative !important;
+                z-index: 10;
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+            }
+
+            .action-row-buttons {
+                gap: 12px !important;
+                margin-top: 10px;
+            }
+
+            .btn-mini-pos {
+                padding: 10px 14px !important;
+            }
+
+            .mobile-pos-nav {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                height: 65px;
+                display: flex !important;
+                z-index: 99999;
+                background: #ffffff;
+                border-top: 1px solid #edf2f7;
+            }
+
+            .pos-tab-trigger {
+                flex: 1;
+                border: none;
+                background: none;
+                font-weight: 800;
+                font-size: 11px;
+                text-transform: uppercase;
+                color: #94a3b8;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 4px;
+                cursor: pointer;
+                transition: background 0.2s;
+            }
+
+            .pos-tab-trigger.active-tab {
+                color: #27AE60;
+                border-top: 3px solid #27AE60;
+                background: #f8fafc;
+            }
+        }
+
+        @media (min-width: 600px) {
+            .mobile-pos-nav {
+                display: none !important;
+            }
+        }
     </style>
 </head>
+
 <body>
     <header class="mobile-header">
         <button class="hamburger-btn" onclick="toggleSidebar()"><span></span><span></span><span></span></button>
-        <div class="mobile-logo">🍕 Jungle POS</div>
+        <div class="mobile-logo">🍕🍕🍕🍕 Jungle POS</div>
     </header>
     <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
     <div class="dashboard-layout">
@@ -235,49 +426,43 @@ $msg_success = $_GET['success'] ?? null;
         <main class="main-content" style="padding-bottom: 5px;">
             <?php if ($msg_error): ?><div class="alert alert-error">⚠ <?php echo htmlspecialchars($msg_error); ?></div><?php endif; ?>
             <?php if ($msg_success): ?><div class="alert alert-success">✅ <?php echo htmlspecialchars($msg_success); ?></div><?php endif; ?>
-            
             <div class="pos-grid-container">
+
                 <!-- COLUMNA IZQUIERDA: EL CATÁLOGO VISUAL SELECCIONABLE -->
                 <div class="pos-card">
-                    <!-- 🎛️ SELECTOR DESPLEGABLE DE CATEGORÍAS (MÁXIMO AHORRO DE ESPACIO TÁCTIL) -->
                     <div class="category-select-wrapper">
-                        <label style="display: block; margin-bottom: 6px; font-weight: 700; font-size: 13px; color: var(--verde-oscuro);">
-                            📁 Seleccionar Categoría:
-                        </label>
+                        <label style="display: block; margin-bottom: 6px; font-weight: 700; font-size: 13px; color: #1b4332;">📁📁📁📁 Seleccionar Categoría:</label>
                         <?php
-                        // 🌟 MAPA DE PRIORIDADES GASTRONÓMICAS IDEAL JUNGLE POS
                         $ordenIdealGastro = ['entrada', 'pizza', 'almuerzo', 'rapida', 'bebida', 'empaque'];
-
-                        // Ordenamos el arreglo original de tu menú usando la función de comparación de PHP
                         usort($categoriasMenu, function ($a, $b) use ($ordenIdealGastro) {
                             $nombreA = strtolower($a['nombre']);
                             $nombreB = strtolower($b['nombre']);
-                            $posA = false; $posB = false;
-
+                            $posA = false;
+                            $posB = false;
                             foreach ($ordenIdealGastro as $index => $keyword) {
-                                if (strpos($nombreA, $keyword) !== false) { $posA = $index; break; }
+                                if (strpos($nombreA, $keyword) !== false) {
+                                    $posA = $index;
+                                    break;
+                                }
                             }
                             foreach ($ordenIdealGastro as $index => $keyword) {
-                                if (strpos($nombreB, $keyword) !== false) { $posB = $index; break; }
+                                if (strpos($nombreB, $keyword) !== false) {
+                                    $posB = $index;
+                                    break;
+                                }
                             }
-
                             $posA = ($posA === false) ? 99 : $posA;
                             $posB = ($posB === false) ? 99 : $posB;
                             return $posA <=> $posB;
                         });
                         ?>
-
-                        <!-- El evento onchange envía el value seleccionado directo a tu función JS -->
-                        <select class="form-control" style="width: 100%; padding: 12px; font-size: 15px; font-weight: 700; border: 2px solid var(--verde-oscuro); border-radius: 8px; color: #1e293b; background-color: #ffffff; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.02);"
-                                onchange="filtrarCatalogoArea(this.value, this)">
-                            <option value="0">🌍 Mostrar Todo el Menú</option>
+                        <select class="form-control" id="select-categoria-pos" onchange="filtrarCatalogoArea(this.value, this)">
+                            <option value="0">🌍🌍🌍🌍 Mostrar Todo el Menú</option>
                             <?php
                             foreach ($categoriasMenu as $cat):
                                 $id_limpio = (int)$cat['id'];
                                 $nombre_minuscula = strtolower($cat['nombre']);
-                                
-                                // Asignación automatizada de iconos visuales
-                                $icono = '🍽️ ';
+                                $icono = '🍽 ';
                                 if (strpos($nombre_minuscula, 'entrada') !== false) $icono = '🥗 ';
                                 elseif (strpos($nombre_minuscula, 'pizza') !== false) $icono = '🍕 ';
                                 elseif (strpos($nombre_minuscula, 'almuerzo') !== false) $icono = '🍲 ';
@@ -285,33 +470,37 @@ $msg_success = $_GET['success'] ?? null;
                                 elseif (strpos($nombre_minuscula, 'bebida') !== false || $id_limpio === 5) $icono = '🍹 ';
                                 elseif (strpos($nombre_minuscula, 'empaque') !== false) $icono = '📦 ';
                             ?>
-                                <option value="<?php echo $id_limpio; ?>">
-                                    <?php echo $icono . htmlspecialchars($cat['nombre']); ?>
-                                </option>
+                                <option value="<?php echo $id_limpio; ?>"><?php echo $icono . htmlspecialchars($cat['nombre']); ?></option>
                             <?php endforeach; ?>
                         </select>
-                    </div>
 
-                    <!-- 🍕 CUADRÍCULA ELÁSTICA DE PLATOS CON FOTOGRAFÍA -->
+                        <!-- 🔍 CUADRO DE BÚSQUEDA RÁPIDA DE ALTA EFICIENCIA EN TIEMPO REAL -->
+                        <div style="margin-top: 10px;">
+                            <input type="text" id="buscador-productos-pos" class="form-control"
+                                placeholder="🔍 Buscar por nombre... (Ej: Toña, Pepperoni, Coca)"
+                                onkeyup="ejecutarBusquedaRapidaItem(this.value)"
+                                style="background: #f8fafc; border: 2px solid #cbd5e1 !important; font-weight: 600;">
+                        </div>
+                    </div>
                     <div class="menu-products-layout">
-                        <!-- 🍕 CONFIGURADOR MIXTO FIJO EN PRIMERA POSICIÓN -->
-                        <div class="product-item-card" data-cat-id="2" style="background: linear-gradient(135deg, #fff3cd, #ffe8cc); border: 2px dashed #e67e22;" onclick="abrirModalPizzaMixta()">
-                            <div style="width:100%; height:95px; background:rgba(230, 126, 34, 0.1); display:flex; align-items:center; justify-content:center; font-size:32px;">🍕</div>
+                        <!-- CONFIGURADOR MIXTO FIJO EN PRIMERA POSICIÓN -->
+                        <div class="product-item-card" data-cat-id="2"
+                            style="background: linear-gradient(135deg, #fff3cd, #ffe8cc); border: 2px dashed #e67e22;" onclick="abrirModalPizzaMixta()">
+                            <div style="width:100%; height:95px; background:rgba(230, 126, 34, 0.1); display:flex; align-items:center; justify-content:center; font-size:32px;">🍕🍕🍕🍕</div>
                             <div class="product-body-desc" style="justify-content: center; text-align: center;">
                                 <span class="product-item-title" style="color: #b55d05; font-size: 14px; margin: 0;">★ Armar Pizza Mixta</span>
                                 <span style="font-size: 11px; font-weight: bold; color: #e67e22;">Mitad y Mitad</span>
                             </div>
                         </div>
 
-                        <!-- ITERACIÓN AUTOMÁTICA DE PRODUCTOS CON IMAGEN -->
+                        <!-- ITERACIÓN AUTOMÁTICA DE PRODUCTOS -->
                         <?php if (!empty($productosMenu)): ?>
                             <?php foreach ($productosMenu as $p): ?>
-                                <div class="product-item-card" data-cat-id="<?php echo $p['categoria_id']; ?>"
-                                     onclick="agregarProductoFila(<?php echo $p['id']; ?>, '<?php echo htmlspecialchars($p['nombre']); ?>', <?php echo $p['precio_base']; ?>)">
+                                <div class="product-item-card" data-cat-id="<?php echo $p['categoria_id']; ?>" onclick="agregarProductoFila(<?php echo $p['id']; ?>, '<?php echo htmlspecialchars($p['nombre']); ?>', <?php echo $p['precio_base']; ?>)">
                                     <?php if (!empty($p['imagen']) && file_exists(__DIR__ . '/../public/uploads/productos/' . $p['imagen'])): ?>
                                         <img src="<?php echo URL_BASE; ?>public/uploads/productos/<?php echo $p['imagen']; ?>" alt="Foto Menu">
                                     <?php else: ?>
-                                        <div style="width:100%; height:95px; background:#e2e8f0; display:flex; align-items:center; justify-content:center; font-size:24px;">🍽️</div>
+                                        <div style="width:100%; height:95px; background:#e2e8f0; display:flex; align-items:center; justify-content:center; font-size:24px;">🍽🍽🍽🍽</div>
                                     <?php endif; ?>
                                     <div class="product-body-desc">
                                         <span class="product-item-title"><?php echo htmlspecialchars($p['nombre']); ?></span>
@@ -323,7 +512,6 @@ $msg_success = $_GET['success'] ?? null;
                     </div>
                 </div>
 
-                <!-- FORMULARIO OCULTO INSERCIÓN RÁPIDA (Mantiene la sincronización POST ordinaria) -->
                 <form id="form-add-item-hidden" action="<?php echo URL_BASE; ?>controllers/PedidoController.php" method="POST" style="display:none;">
                     <input type="hidden" name="accion" value="agregar_item">
                     <input type="hidden" name="pedido_id" value="<?php echo $pedido_id; ?>">
@@ -332,243 +520,283 @@ $msg_success = $_GET['success'] ?? null;
                     <input type="hidden" name="precio_unitario" id="hidden-prod-price">
                     <input type="hidden" name="es_mixta" value="0">
                 </form>
+
                 <!-- COLUMNA DERECHA: DESGLOSE DE LA COMANDA ACTIVA -->
                 <div class="pos-card">
-                    <!-- CABECERA DEL TICKET (Muestra identificadores y operador del turno) -->
-                    <div class="ticket-header-info">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <span style="font-weight:800; color:var(--verde-oscuro); font-size: 14px;">📋 TICKET #<?php echo $pedido_id; ?></span>
-                            <span style="background: #e2e8f0; color: #334155; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;">
-                                👤 <?php echo htmlspecialchars($pedidoInfo['nombre_mesero'] ?? 'Sistema'); ?>
-                            </span>
-                        </div>
-                        
-                        <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 8px 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 6px;">
-                            <span style="color:#475569; font-weight: 600;">Modalidad: <strong style="color: #e67e22;"><?php echo strtoupper($pedidoInfo['tipo_pedido']); ?></strong></span>
-                            
-                            <!-- CONTADOR INTERACTIVO DE COMENSALES (AJAX silencioso) -->
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <span style="font-size: 12px; color: #64748b; font-weight: 700;">Clientes:</span>
-                                <button type="button" onclick="ajustarComensales(-1)" style="width: 26px; height: 26px; border-radius: 4px; border: 1px solid #cbd5e1; background: #fff; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">-</button>
-                                <span id="label-num-personas" style="font-weight: 800; color: var(--verde-oscuro); font-size: 14px; min-width: 15px; text-align: center;"><?php echo intval($pedidoInfo['num_personas'] ?? 1); ?></span>
-                                <button type="button" onclick="ajustarComensales(1)" style="width: 26px; height: 26px; border-radius: 4px; border: 1px solid #cbd5e1; background: #fff; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">+</button>
+                    <div class="comanda-ticket-wrapper">
+                        <div class="ticket-header-info">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="font-weight:800; color:#1b4332; font-size: 14px;">📋📋📋📋 TICKET #<?php echo $pedido_id; ?></span>
+                                <span style="background: #e2e8f0; color: #334155; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;">
+                                    👤👤👤👤 <?php echo htmlspecialchars($pedidoInfo['nombre_mesero'] ?? 'Sistema'); ?>
+                                </span>
                             </div>
-                        </div>
-                        
-                        <?php if ($pedidoInfo['tipo_pedido'] === 'local'): ?>
-                            <span style="color:#666; display: block; font-size: 12px;">
-                                📍 Ubicación: <strong><?php echo htmlspecialchars($pedidoInfo['nombre_area'] ?? 'Salón'); ?> / <?php echo htmlspecialchars($pedidoInfo['numero_mesa'] ?? 'Barra'); ?></strong>
-                            </span>
-                        <?php endif; ?>
-                    </div>
-
-                    <!-- ÁREA DE ELEMENTOS DE CUENTA CON SCROLL INTERNO INDEPENDIENTE -->
-                    <div class="ticket-rows-scroll">
-                        <?php
-                        $subtotal_acumulado = 0;
-                        if (empty($itemsComanda)):
-                        ?>
-                            <div style="text-align:center; color:#94a3b8; padding:40px 10px; font-size:13px; font-style:italic;">
-                                Comanda vacía. Toca los productos de la izquierda para sumarlos a la cuenta de la mesa.
+                            <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 8px 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 6px;">
+                                <span style="color:#475569; font-weight: 600;">Modalidad: <strong style="color: #e67e22;"><?php echo strtoupper($pedidoInfo['tipo_pedido']); ?></strong></span>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 12px; color: #64748b; font-weight: 700;">Clientes:</span>
+                                    <button type="button" onclick="ajustarComensales(-1)" style="width: 26px; height: 26px; border-radius: 4px; border: 1px solid #cbd5e1; background: #fff; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">-</button>
+                                    <span id="label-num-personas" style="font-weight: 800; color: #1b4332; font-size: 14px; min-width: 15px; text-align: center;"><?php echo intval($pedidoInfo['num_personas'] ?? 1); ?></span>
+                                    <button type="button" onclick="ajustarComensales(1)" style="width: 26px; height: 26px; border-radius: 4px; border: 1px solid #cbd5e1; background: #fff; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">+</button>
+                                </div>
                             </div>
-                        <?php 
-                        else: 
-                            foreach ($itemsComanda as $item):
-                                $subtotal_acumulado += floatval($item['subtotal']);
-                                $id_detalle = (int)$item['id'];
-                                
-                                // 1. EXTRAER EXTRAS DESDE TU TABLA RELACIONAL EN ESPAÑOL
-                                $stmtExt = $db->prepare("SELECT pde.*, p.nombre FROM pedido_detalle_extras pde INNER JOIN productos p ON pde.producto_id = p.id WHERE pde.pedido_detalle_id = :det_id");
-                                $stmtExt->execute(['det_id' => $id_detalle]);
-                                $extrasItem = $stmtExt->fetchAll();
+                            <?php if ($pedidoInfo['tipo_pedido'] === 'local' && !empty($pedidoInfo['mesa_id'])): ?>
+                                <span style="color:#666; display: block; font-size: 12px; margin-bottom: 8px;">
+                                    📍📍📍📍 Ubicación: <strong><?php echo htmlspecialchars($pedidoInfo['nombre_area'] ?? 'Salón'); ?> / <?php echo htmlspecialchars($pedidoInfo['numero_mesa'] ?? 'Barra'); ?></strong>
+                                    <!-- 🔄 GATILLO VISUAL: Cambio de Mesa encapsulado -->
+                                    <button type="button" onclick="abrirModalCambioMesa()" style="margin-left: 8px; background: #e67e22; color: #fff; border: none; padding: 3px 8px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer; box-shadow: 0 2px 4px rgba(230,126,34,0.15);">🔄 Cambiar Mesa</button>
+                                </span>
+                            <?php endif; ?>
+                            <!-- Cuadro de texto dinámico para capturar el Nombre del Cliente en el POS -->
+<div style="margin-top: 8px; display: flex; align-items: center; gap: 8px; width: 100%;">
+    <span style="font-size: 12px; color: #64748b; font-weight: 700; min-width: 55px;">Cliente:</span>
+    <input type="text" id="input-cliente-nombre-pos" class="form-control" 
+           placeholder="👤 Nombre del cliente (Ej: Carlos / Pareja ventana)" 
+           value="<?php echo htmlspecialchars($pedidoInfo['cliente_nombre'] ?? ''); ?>"
+           onchange="guardarNombreClienteDinamico(this.value)"
+           style="padding: 6px 10px !important; font-size: 13px !important; border: 2px solid #cbd5e1 !important; border-radius: 6px !important; background: #ffffff; font-weight: 600; height: auto !important; flex: 1;">
+</div>
 
-                                // 2. EXTRAER MITADES (Para pizzas mixtas combinadas de sabores)
-                                $saboresMixtosText = "";
-                                if (isset($item['es_mixta']) && (int)$item['es_mixta'] === 1) {
-                                    $stmtSab = $db->prepare("SELECT p.nombre FROM pedido_detalle_sabores pds INNER JOIN productos p ON pds.producto_id = p.id WHERE pds.pedido_detalle_id = :det_id");
-                                    $stmtSab->execute(['det_id' => $id_detalle]);
-                                    $saboresMitades = $stmtSab->fetchAll(PDO::FETCH_COLUMN);
-                                    if (!empty($saboresMitades)) {
-                                        $saboresMixtosText = "Combinación: " . implode(" / ", $saboresMitades);
+                        </div>
+                        <div class="ticket-rows-scroll" id="contenedor-render-comanda-ajax">
+                            <?php
+                            // views/tomar_pedido.php (Parte 5 de 8)
+                            $subtotal_acumulado = 0;
+                            if (empty($itemsComanda)):
+                            ?>
+                                <div style="text-align:center; color:#94a3b8; padding:40px 10px; font-size:13px; font-style:italic;">
+                                    Comanda vacía. Toca los productos de la izquierda para sumarlos.
+                                </div>
+                                <?php
+                            else:
+                                $comida_lista = [];
+                                $bebidas_agrupadas = [];
+                                $ID_CATEGORIA_BEBIDAS = 5; // ID nativo de la categoría Bebidas
+
+                                // 🔄 PASO A: SEPARACIÓN Y AGRUPACIÓN CONTABLE POR ID Y ESTADO EN CALIENTE
+                                foreach ($itemsComanda as $item) {
+                                    $idProducto = (int)$item['producto_id'];
+                                    $idCategoria = isset($item['categoria_id']) ? (int)$item['categoria_id'] : 0;
+                                    $estadoItem = trim($item['estado'] ?? 'solicitado');
+
+                                    if ($idCategoria === $ID_CATEGORIA_BEBIDAS) {
+                                        // Llave única compuesta: Unifica ID de producto y su estado KDS real
+                                        $llaveBebida = $idProducto . '_' . $estadoItem;
+
+                                        if (isset($bebidas_agrupadas[$llaveBebida])) {
+                                            $bebidas_agrupadas[$llaveBebida]['cantidad'] += intval($item['cantidad']);
+                                            $bebidas_agrupadas[$llaveBebida]['subtotal'] += floatval($item['subtotal']);
+                                        } else {
+                                            $bebidas_agrupadas[$llaveBebida] = $item;
+                                        }
+                                    } else {
+                                        $comida_lista[] = $item;
                                     }
                                 }
-                        ?>
-                               <?php
-// ==========================================================================
-// 🎨 MÁQUINA DE ESTADOS FINITA (FSM) - ESQUEMA HOMOLOGADO JUNGLE POS
-// ==========================================================================
-$estado_actual_item = trim($item['estado'] ?? 'solicitado');
 
-// 🌟 DETECTOR DE ESTACIÓN: Extraemos el destino KDS real para pintar el texto exacto
-$stmtEstacion = $db->prepare("SELECT area_produccion FROM productos WHERE id = :prod_id LIMIT 1");
-$stmtEstacion->execute(['prod_id' => intval($item['producto_id'])]);
-$area_res = $stmtEstacion->fetch(PDO::FETCH_ASSOC);
-$estacion_destino = strtoupper($area_res['area_produccion'] ?? 'Cocina');
+                                // 🔄 PASO B: RENDERIZAR LA COMIDA REGISTRO POR REGISTRO (CON SUS EXTRAS)
+                                foreach ($comida_lista as $item):
+                                    $subtotal_acumulado += floatval($item['subtotal']);
+                                    $id_detalle = (int)$item['id'];
 
-// Valores base por defecto: Verde Jungle para los nuevos borradores
-$estilo_fondo = 'background: #ffffff; border-left: 5px solid #2b8a3e;'; 
-$badge_html = '<span style="font-size: 10px; font-weight: 800; background: #ebfbee; color: #2b8a3e; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.3px;">✨ Nuevo Borrador</span>';
-$bloquear_borrado_ordinario = false; 
+                                    $stmtExt = $db->prepare("SELECT pde.*, p.nombre FROM pedido_detalle_extras pde INNER JOIN productos p ON pde.producto_id = p.id WHERE pde.pedido_detalle_id = :det_id");
+                                    $stmtExt->execute(['det_id' => $id_detalle]);
+                                    $extrasItem = $stmtExt->fetchAll();
 
-if ($estado_actual_item === 'pendiente') {
-    // 🚀 HOMOLOGACIÓN DE DESTINOS: El letrero te dice exactamente a qué monitor viajó
-    $estilo_fondo = 'background: #fafafa; border-left: 5px solid #cbd5e1; opacity: 0.85;'; // Gris resguardo
-    $badge_html = '<span style="font-size: 10px; font-weight: 800; background: #f1f5f9; color: #475569; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.3px;">📦 Comandado ' . $estacion_destino . '</span>';
-    $bloquear_borrado_ordinario = true; 
-} elseif ($estado_actual_item === 'preparando') {
-    $estilo_fondo = 'background: #fdfaf6; border-left: 5px solid #d9480f; opacity: 0.85;'; // Naranja estricto solo para lo que está en fuego
-    $badge_html = '<span style="font-size: 10px; font-weight: 800; background: #fff4e6; color: #d9480f; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.3px;">🔥 En Fuego</span>';
-    $bloquear_borrado_ordinario = true;
-} elseif ($estado_actual_item === 'servido') {
-    $estilo_fondo = 'background: #f4f8fa; border-left: 5px solid #0d47a1; opacity: 0.70;'; // Azul para Entregado a la Mesa
-    $badge_html = '<span style="font-size: 10px; font-weight: 800; background: #e3f2fd; color: #0d47a1; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.3px;">✅ Servido</span>';
-    $bloquear_borrado_ordinario = true;
-}
-?>
-<!-- Fila de la comanda con inyección de paletas elásticas CSS (Mantiene tu maquetación intacta) -->
-<div class="ticket-item-row" id="fila-detalle-<?php echo $id_detalle; ?>" style="display: flex; justify-content: space-between; align-items: start; padding: 12px 10px; border-bottom: 1px solid #edf2f7; border-radius: 8px; margin-bottom: 6px; box-sizing: border-box; <?php echo $estilo_fondo; ?>">
-    <div style="flex:1; padding-right:10px;">
-        <span style="font-weight:700; color:#1e293b;"><?php echo (int)$item['cantidad']; ?>x</span>
-        <span style="font-weight: 600; color: #1b4332;">
-            <?php echo ((int)$item['es_mixta'] === 1) ? "Pizza Mixta Combinada" : htmlspecialchars($item['nombre_producto']); ?>
-        </span>
+                                    $saboresMixtosText = "";
+                                    if (isset($item['es_mixta']) && (int)$item['es_mixta'] === 1) {
+                                        $stmtSab = $db->prepare("SELECT p.nombre FROM pedido_detalle_sabores pds INNER JOIN productos p ON pds.producto_id = p.id WHERE pds.pedido_detalle_id = :det_id");
+                                        $stmtSab->execute(['det_id' => $id_detalle]);
+                                        $saboresMitades = $stmtSab->fetchAll(PDO::FETCH_COLUMN);
+                                        if (!empty($saboresMitades)) {
+                                            $saboresMixtosText = "Combinación: " . implode(" / ", $saboresMitades);
+                                        }
+                                    }
 
-        <!-- Visualización de las mitades combinadas (Mapeo simétrico al KDS) -->
-        <?php if (!empty($saboresMixtosText)): ?>
-            <div style="font-size: 12px; color: #e67e22; font-weight: bold; background: #fff4e6; padding: 4px 8px; border-radius: 4px; margin-top: 3px; display: inline-block;">
-                <?php echo htmlspecialchars($saboresMixtosText); ?>
-            </div>
-        <?php endif; ?>
+                                    $estado_actual_item = trim($item['estado'] ?? 'solicitado');
+                                    $stmtEstacion = $db->prepare("SELECT area_produccion FROM productos WHERE id = :prod_id LIMIT 1");
+                                    $stmtEstacion->execute(['prod_id' => intval($item['producto_id'])]);
+                                    $area_res = $stmtEstacion->fetch(PDO::FETCH_ASSOC);
+                                    $estacion_destino = strtoupper($area_res['area_produccion'] ?? 'Cocina');
 
-        <!-- 🌟 INYECCIÓN DE LA NUEVA INSIGNIA DE ESTACIÓN INTELIGENTE -->
-        <div style="margin-top: 5px; display: flex; gap: 4px; align-items: center; margin-bottom: 4px;">
-            <?php echo $badge_html; ?>
-        </div>
+                                    $estilo_fondo = 'background: #ffffff; border-left: 5px solid #2b8a3e;';
+                                    $badge_html = '<span style="font-size: 10px; font-weight: 800; background: #ebfbee; color: #2b8a3e; padding: 2px 6px; border-radius: 4px; text-transform: uppercase;">✨ Nuevo Borrador</span>';
+                                    $bloquear_borrado_ordinario = false;
 
-        <!-- Renderizado del recuadro de adicionales con inyección de precios -->
-        <?php if (!empty($extrasItem)): ?>
-            <div style="font-size:11px; color:#b58105; background:#fffbeb; padding:6px 8px; border-radius:4px; margin-top:5px; font-weight:600; line-height: 1.4;">
-                <?php foreach ($extrasItem as $ex):
-                    $subtotal_acumulado += (floatval($ex['cantidad']) * floatval($ex['precio_cobrado']));
-                    $costo_total_este_extra = floatval($ex['cantidad']) * floatval($ex['precio_cobrado']);
-                ?>
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 1px 0;">
-                        <span>✦ +<?php echo (int)$ex['cantidad']; ?> <?php echo htmlspecialchars($ex['nombre']); ?></span>
-                        <span style="color: #856404; font-weight: 700;">+ C$ <?php echo number_format($costo_total_este_extra, 2); ?></span>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        <?php endif; ?>
+                                    if ($estado_actual_item === 'pendiente') {
+                                        $estilo_fondo = 'background: #fafafa; border-left: 5px solid #cbd5e1; opacity: 0.85;';
+                                        $badge_html = '<span style="font-size: 10px; font-weight: 800; background: #f1f5f9; color: #475569; padding: 2px 6px; border-radius: 4px; text-transform: uppercase;">📦 Comandado ' . $estacion_destino . '</span>';
+                                        $bloquear_borrado_ordinario = true;
+                                    } elseif ($estado_actual_item === 'preparando') {
+                                        $estilo_fondo = 'background: #fdfaf6; border-left: 5px solid #d9480f; opacity: 0.85;';
+                                        $badge_html = '<span style="font-size: 10px; font-weight: 800; background: #fff4e6; color: #d9480f; padding: 2px 6px; border-radius: 4px; text-transform: uppercase;">🔥🔥🔥🔥 En Fuego</span>';
+                                        $bloquear_borrado_ordinario = true;
+                                    } elseif ($estado_actual_item === 'servido') {
+                                        $estilo_fondo = 'background: #f4f8fa; border-left: 5px solid #0d47a1; opacity: 0.70;';
+                                        $badge_html = '<span style="font-size: 10px; font-weight: 800; background: #e3f2fd; color: #0d47a1; padding: 2px 6px; border-radius: 4px; text-transform: uppercase;">✅ Servido</span>';
+                                        $bloquear_borrado_ordinario = true;
+                                    }
+                                ?>
+                                    <div class="ticket-item-row" id="fila-detalle-<?php echo $id_detalle; ?>" style="display: flex; justify-content: space-between; align-items: start; padding: 12px 10px; border-bottom: 1px solid #edf2f7; border-radius: 8px; margin-bottom: 6px; box-sizing: border-box; <?php echo $estilo_fondo; ?>">
+                                        <div style="flex:1; padding-right:10px;">
+                                            <span style="font-weight:700; color:#1e293b;"><?php echo (int)$item['cantidad']; ?>x</span>
+                                            <span style="font-weight: 600; color: #1b4332;"><?php echo ((int)$item['es_mixta'] === 1) ? "Pizza Mixta Combinada" : htmlspecialchars($item['nombre_producto']); ?></span>
+                                            <?php if (!empty($saboresMixtosText)): ?>
+                                                <div style="font-size: 12px; color: #e67e22; font-weight: bold; background: #fff4e6; padding: 4px 8px; border-radius: 4px; margin-top: 3px; display: inline-block;"><?php echo htmlspecialchars($saboresMixtosText); ?></div>
+                                            <?php endif; ?>
+                                            <div style="margin-top: 5px; display: flex; gap: 4px; align-items: center; margin-bottom: 4px;"><?php echo $badge_html; ?></div>
+                                            <?php if (!empty($extrasItem)): ?>
+                                                <div style="font-size:11px; color:#b58105; background:#fffbeb; padding:6px 8px; border-radius:4px; margin-top:5px; font-weight:600; line-height: 1.4;">
+                                                    <?php foreach ($extrasItem as $ex):
+                                                        $subtotal_acumulado += (floatval($ex['cantidad']) * floatval($ex['precio_cobrado']));
+                                                        $costo_total_este_extra = floatval($ex['cantidad']) * floatval($ex['precio_cobrado']);
+                                                    ?>
+                                                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 1px 0;">
+                                                            <span>✦ +<?php echo (int)$ex['cantidad']; ?> <?php echo htmlspecialchars($ex['nombre']); ?></span>
+                                                            <span style="color: #856404; font-weight: 700;">+ C$ <?php echo number_format($costo_total_este_extra, 2); ?></span>
+                                                        </div>
+                                                    <?php endforeach; ?>
+                                                </div>
+                                            <?php endif; ?>
+                                            <div class="action-row-buttons">
+                                                <button type="button" class="btn-mini-pos btn-mini-extra" onclick="abrirModalModificadores(<?php echo $item['id']; ?>, '<?php echo htmlspecialchars($item['nombre_producto']); ?>')">🧀 + Extra</button>
+                                                <?php if ($bloquear_borrado_ordinario === false): ?>
+                                                    <button type="button" class="btn-mini-pos btn-mini-delete" onclick="solicitarBajaItem(<?php echo $item['id']; ?>, '<?php echo htmlspecialchars($item['nombre_producto']); ?>')">❌ Quitar</button>
+                                                <?php else: ?>
+                                                    <span style="font-size: 11px; color: #94a3b8; font-style: italic; padding-left: 5px; display: inline-flex; align-items: center; gap: 3px;">🔒 Comandado</span>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                        <div style="font-weight:800; text-align:right; color:#334155; min-width:70px; padding-top: 2px;">C$ <?php echo number_format($item['subtotal'], 2); ?></div>
+                                    </div>
+                                <?php endforeach; ?>
+                                <?php
+                                // views/tomar_pedido.php (Parte 6 de 8)
+                                // 🥤 2.B. RENDERIZAR GRUPO DE BEBIDAS EXCLUSIVAS CON SU ESTADO KDS REAL
+                                if (!empty($bebidas_agrupadas)): ?>
+                                    <div style="text-align: center; font-size: 11px; font-weight: bold; background: #e2e8f0; color:#334155; padding: 5px; margin: 10px 0; border-radius: 6px; letter-spacing: 0.5px;">--- 🥤 CONSOLIDADO DE BEBIDAS ---</div>
+                                    <?php foreach ($bebidas_agrupadas as $bebida):
+                                        $subtotal_acumulado += floatval($bebida['subtotal']);
+                                        $estado_actual_bebida = trim($bebida['estado'] ?? 'solicitado');
 
-        <!-- BOTONERA TÁCTIL INTELIGENTE CON CANDADOS DE RONDAS -->
-        <div class="action-row-buttons" style="margin-top: 8px; display: flex; gap: 6px;">
-            <button type="button" class="btn-mini-pos btn-mini-extra" onclick="abrirModalModificadores(<?php echo $item['id']; ?>, '<?php echo htmlspecialchars($item['nombre_producto']); ?>')">🧀 + Extra</button>
-            
-            <?php if ($bloquear_borrado_ordinario === false): ?>
-                <!-- Caso A: Es un borrador libre de la ronda nueva. Borrado instantáneo permitido -->
-                <button type="button" class="btn-mini-pos btn-mini-delete" onclick="solicitarBajaItem(<?php echo $item['id']; ?>, '<?php echo htmlspecialchars($item['nombre_producto']); ?>')">❌ Quitar</button>
-            <?php else: ?>
-                <!-- Caso B: El plato ya está en producción. Bloqueo ordinario e insignia protectora -->
-                <span style="font-size: 11px; color: #94a3b8; font-style: italic; padding-left: 5px; display: inline-flex; align-items: center; gap: 3px;">🔒 Comandado</span>
-            <?php endif; ?>
-        </div>
-    </div>
+                                        // Consultamos la estación de producción real (Generalmente BAR)
+                                        $stmtEstacionB = $db->prepare("SELECT area_produccion FROM productos WHERE id = :prod_id LIMIT 1");
+                                        $stmtEstacionB->execute(['prod_id' => intval($bebida['producto_id'])]);
+                                        $area_res_b = $stmtEstacionB->fetch(PDO::FETCH_ASSOC);
+                                        $estacion_destino_b = strtoupper($area_res_b['area_produccion'] ?? 'Bar');
 
-    <div style="font-weight:800; text-align:right; color:#334155; min-width:70px; padding-top: 2px;">
-        C$ <?php echo number_format($item['subtotal'], 2); ?>
-    </div>
-</div>
-<?php
-    endforeach; 
-endif; 
-?>
-</div>
+                                        // Inicializamos las etiquetas visuales respetando tus mismos colores del POS
+                                        $badge_bebida_html = '<span style="font-size: 10px; font-weight: 800; background: #ebfbee; color: #2b8a3e; padding: 2px 6px; border-radius: 4px; text-transform: uppercase;">✨ Nuevo Borrador</span>';
+                                        $bloquear_quitar_bebida = false;
 
+                                        if ($estado_actual_bebida === 'pendiente') {
+                                            $badge_bebida_html = '<span style="font-size: 10px; font-weight: 800; background: #f1f5f9; color: #475569; padding: 2px 6px; border-radius: 4px; text-transform: uppercase;">📦 Comandado ' . $estacion_destino_b . '</span>';
+                                            $bloquear_quitar_bebida = true;
+                                        } elseif ($estado_actual_bebida === 'preparando') {
+                                            $badge_bebida_html = '<span style="font-size: 10px; font-weight: 800; background: #fff4e6; color: #d9480f; padding: 2px 6px; border-radius: 4px; text-transform: uppercase;">🍹 En Preparación</span>';
+                                            $bloquear_quitar_bebida = true;
+                                        } elseif ($estado_actual_bebida === 'servido') {
+                                            $badge_bebida_html = '<span style="font-size: 10px; font-weight: 800; background: #e3f2fd; color: #0d47a1; padding: 2px 6px; border-radius: 4px; text-transform: uppercase;">✅ Entregado</span>';
+                                            $bloquear_quitar_bebida = true;
+                                        }
+                                    ?>
+                                        <div class="ticket-item-row" style="display: flex; justify-content: space-between; align-items: start; padding: 12px 10px; border-bottom: 1px solid #edf2f7; background: #f8fafc; border-left: 5px solid #0284c7; border-radius: 8px; margin-bottom: 6px; box-sizing: border-box; <?php echo ($bloquear_quitar_bebida) ? 'opacity: 0.85;' : ''; ?>">
+                                            <div style="flex: 1; padding-right: 10px;">
+                                                <span style="font-weight:800; color:#0284c7; font-size:15px;"><?php echo (int)$bebida['cantidad']; ?>x</span>
+                                                <span style="font-weight:700; color:#1e293b;"><?php echo htmlspecialchars($bebida['nombre_producto']); ?></span>
 
+                                                <!-- Inyección del indicador de estado en tiempo real -->
+                                                <div style="margin-top: 5px; display: flex; gap: 4px; align-items: center; margin-bottom: 4px;">
+                                                    <?php echo $badge_bebida_html; ?>
+                                                </div>
 
-                    <!-- TOTALES DEL TICKET CON AJUSTES EN CALIENTE -->
-                    <div class="ticket-summary-totals">
-                        <div class="summary-flex-line">
-                            <span>Consumo Neto:</span>
-                            <strong id="resumen-subtotal-neto" data-neto="<?php echo $subtotal_acumulado; ?>">C$ <?php echo number_format($subtotal_acumulado, 2); ?></strong>
-                        </div>
-                        
-                        <?php if ($pedidoInfo['tipo_pedido'] === 'local'): ?>
-                            <div class="summary-flex-line" style="color: #2563eb;">
-                                <span>Propina Sugerida (10%):</span>
-                                <span>C$ <?php echo number_format($subtotal_acumulado * 0.10, 2); ?></span>
+                                                <!-- Botón de Quitar Condicional según el estado de la bebida -->
+                                                <div class="action-row-buttons">
+                                                    <?php if ($bloquear_quitar_bebida === false): ?>
+                                                        <button type="button" class="btn-mini-pos btn-mini-delete" style="padding: 4px 10px; font-size: 11px; max-width: 80px;"
+                                                            onclick="solicitarBajaBebida(<?php echo $bebida['producto_id']; ?>, '<?php echo htmlspecialchars($bebida['nombre_producto']); ?>')">
+                                                            ❌ Quitar 1
+                                                        </button>
+                                                    <?php else: ?>
+                                                        <span style="font-size: 11px; color: #94a3b8; font-style: italic; display: inline-flex; align-items: center; gap: 3px;">🔒 Comandado</span>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+                                            <div style="font-weight:800; color:#334155; min-width: 70px; text-align: right; padding-top: 2px;">C$ <?php echo number_format($bebida['subtotal'], 2); ?></div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            <?php endif; ?>
+                        </div> <!-- Cierre controlado de ticket-rows-scroll -->
+
+                        <!-- SECCIÓN DE TOTALES DEL PIE DE PÁGINA DEL TICKET -->
+                        <div class="ticket-summary-totals">
+                            <div class="summary-flex-line">
+                                <span>Consumo Neto:</span>
+                                <strong id="resumen-subtotal-neto" data-neto="<?php echo $subtotal_acumulado; ?>">C$ <?php echo number_format($subtotal_acumulado, 2); ?></strong>
                             </div>
-                        <?php elseif ($pedidoInfo['tipo_pedido'] === 'delivery'): ?>
-                            <div class="summary-flex-line" style="color: #e67e22; align-items: center; gap: 10px;">
-                                <span>Monto Envío (C$):</span>
-                                <input type="number" id="input-costo-envio-dinamico" name="monto_envio_dinamico" style="width: 90px; padding: 4px 8px; border: 2px solid #e67e22; border-radius: 6px; font-weight: bold; text-align: right;" min="0" step="1" value="<?php echo floatval($pedidoInfo['monto_envio']); ?>" oninput="recalcularGranTotalDelivery(this.value)">
+                            <?php if ($pedidoInfo['tipo_pedido'] === 'local'): ?>
+                                <div class="summary-flex-line" style="color: #2563eb;">
+                                    <span>Propina Sugerida (10%):</span>
+                                    <span>C$ <?php echo number_format($subtotal_acumulado * 0.10, 2); ?></span>
+                                </div>
+                            <?php elseif ($pedidoInfo['tipo_pedido'] === 'delivery'): ?>
+                                <div class="summary-flex-line" style="color: #e67e22; align-items: center; gap: 10px;">
+                                    <span>Monto Envío (C$):</span>
+                                    <input type="number" id="input-costo-envio-dinamico" name="monto_envio_dinamico" style="width: 90px; padding: 4px 8px; border: 2px solid #e67e22; border-radius: 6px; font-weight: bold; text-align: right;" min="0" step="1" value="<?php echo floatval($pedidoInfo['monto_envio']); ?>" oninput="recalcularGranTotalDelivery(this.value)">
+                                </div>
+                            <?php endif; ?>
+                            <div class="summary-flex-line summary-total-bold">
+                                <span>TOTAL FINAL:</span>
+                                <span id="resumen-total-final">C$ <?php echo number_format(floatval($pedidoInfo['total']), 2); ?></span>
                             </div>
-                        <?php endif; ?>
-                        
-                        <div class="summary-flex-line summary-total-bold">
-                            <span>TOTAL FINAL:</span>
-                            <span id="resumen-total-final">C$ <?php echo number_format(floatval($pedidoInfo['total']), 2); ?></span>
-                        </div>
-                        <!-- 🚀 INYECTA ESTE BOTÓN AZÚL REPOSICIONADO ADENTRO DE TU TICKET DERECHO EN views/tomar_pedido.php: -->
-<div style="margin-top: 10px; width: 100%;">
-    <!-- Al dar clic abre la precuenta térmica en una pestaña flotante limpia lista para la tiquetera -->
-    <a href="index.php?v=precuenta&pedido_id=<?php echo $pedido_id; ?>" target="_blank" style="width: 100%; background: #0284c7; color: #ffffff; border: none; padding: 12px; border-radius: 8px; font-weight: 800; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; box-sizing: border-box; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.15); margin-bottom: 8px; text-transform: uppercase;">
-        🧾 Imprimir Precuenta (Mesa)
-    </a>
-</div>
-
-
-                        <!-- 🌟 EL BOTÓN VERDE PURIFICADO CON LA RUTA DE TU CONTROLADOR REAL -->
-                        <div style="margin-top: 15px; width: 100%;">
-                            <form action="<?php echo URL_BASE; ?>controllers/PedidoController.php" method="POST">
-                                <input type="hidden" name="accion" value="comandar_orden_kds">
-                                <input type="hidden" name="pedido_id" value="<?php echo (int)$_GET['pedido_id']; ?>">
-                                <button type="submit" style="width: 100%; background: #2b8a3e; color: #ffffff; border: none; padding: 14px; border-radius: 8px; font-weight: 800; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(43, 138, 62, 0.2); transition: background 0.2s;">
-                                    🚀 Enviar Orden a Producción
-                                </button>
-                            </form>
+                            <div style="margin-top: 10px; width: 100%;">
+                                <a href="index.php?v=precuenta&pedido_id=<?php echo $pedido_id; ?>" target="_blank" style="width: 100%; background: #0284c7; color: #ffffff; border: none; padding: 12px; border-radius: 8px; font-weight: 800; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; box-sizing: border-box; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.15); margin-bottom: 8px; text-transform: uppercase;"> 🧾🧾 Imprimir Precuenta</a>
+                            </div>
+                            <div style="margin-top: 5px; width: 100%;">
+                                <form action="<?php echo URL_BASE; ?>controllers/PedidoController.php" method="POST">
+                                    <input type="hidden" name="accion" value="comandar_orden_kds">
+                                    <input type="hidden" name="pedido_id" value="<?php echo (int)$_GET['pedido_id']; ?>">
+                                    <button type="submit" style="width: 100%; background: #2b8a3e; color: #ffffff; border: none; padding: 14px; border-radius: 8px; font-weight: 800; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(43, 138, 62, 0.2);">🚀🚀🚀🚀 Enviar Orden a Producción</button>
+                                </form>
+                            </div>
                         </div>
                     </div>
-                </div> <!-- Cierre de la clase .pos-card de la comanda -->
-            </div> <!-- Cierre de la clase .pos-grid-container maestro -->
+                </div>
+            </div>
         </main>
     </div>
-    <!-- 📦 CONFIGURADOR FLOTANTE MAESTRO PARA PIZZAS MIXTAS -->
+    <!-- MODAL DE PIZZAS MIXTAS (SABORES COMBINADOS) -->
     <div id="modal-pizza-mixta-wrapper" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999999; align-items: center; justify-content: center; padding: 15px; box-sizing: border-box;">
         <div style="background: #ffffff; width: 100%; max-width: 460px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); overflow: hidden; border-top: 5px solid #e67e22;">
             <div style="padding: 18px; background: #fafbfc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin: 0; color: #1b4332; font-size: 1.15rem;">🍕 Configurar Especialidad Mixta</h3>
+                <h3 style="margin: 0; color: #1b4332; font-size: 1.15rem;">🍕🍕🍕🍕 Configurar Especialidad Mixta</h3>
                 <button type="button" onclick="cerrarModalPizzaMixta()" style="background: none; border: none; font-size: 20px; color: #94a3b8; cursor: pointer; font-weight: bold;">&times;</button>
             </div>
             <form action="<?php echo URL_BASE; ?>controllers/PedidoController.php" method="POST" style="padding: 20px; margin: 0;">
                 <input type="hidden" name="accion" value="agregar_mixta">
                 <input type="hidden" name="pedido_id" value="<?php echo $pedido_id; ?>">
                 <input type="hidden" name="cantidad" value="1">
-                
                 <div style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; color: #1b4332;">Seleccione el Primer Sabor (1/2)</label>
+                    <label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; color: #1b4332;">Primer Sabor (1/2)</label>
                     <select name="sabor_1_id" class="form-control" required>
                         <option value="">-- Escoger Mitad A --</option>
-                        <?php foreach ($productosMenu as $prod): ?>
-                            <?php if ((int)$prod['es_sabor_pizza'] === 1): ?>
+                        <?php foreach ($productosMenu as $prod): if ((int)$prod['es_sabor_pizza'] === 1): ?>
                                 <option value="<?php echo $prod['id']; ?>"><?php echo htmlspecialchars($prod['nombre']); ?> (C$ <?php echo number_format($prod['precio_base'], 2); ?>)</option>
-                            <?php endif; ?>
-                        <?php endforeach; ?>
+                        <?php endif;
+                        endforeach; ?>
                     </select>
                 </div>
-                
                 <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; color: #1b4332;">Seleccione el Segundo Sabor (1/2)</label>
+                    <label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; color: #1b4332;">Segundo Sabor (1/2)</label>
                     <select name="sabor_2_id" class="form-control" required>
                         <option value="">-- Escoger Mitad B --</option>
-                        <?php foreach ($productosMenu as $prod): ?>
-                            <?php if ((int)$prod['es_sabor_pizza'] === 1): ?>
+                        <?php foreach ($productosMenu as $prod): if ((int)$prod['es_sabor_pizza'] === 1): ?>
                                 <option value="<?php echo $prod['id']; ?>"><?php echo htmlspecialchars($prod['nombre']); ?> (C$ <?php echo number_format($prod['precio_base'], 2); ?>)</option>
-                            <?php endif; ?>
-                        <?php endforeach; ?>
+                        <?php endif;
+                        endforeach; ?>
                     </select>
                 </div>
-                
                 <div style="display: flex; gap: 10px; margin-top: 25px;">
                     <button type="button" onclick="cerrarModalPizzaMixta()" style="flex: 1; padding: 12px; border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 8px; font-weight: bold; color: #475569; cursor: pointer;">Cancelar</button>
                     <button type="submit" style="flex: 1; padding: 12px; border: none; background: #e67e22; color: #ffffff; border-radius: 8px; font-weight: bold; cursor: pointer;">➕ Agregar al Ticket</button>
@@ -577,11 +805,11 @@ endif;
         </div>
     </div>
 
-    <!-- 📦 NUEVO MODAL TÁCTIL PARA SELECCIÓN DE INGREDIENTES EXTRAS -->
+    <!-- MODAL PARA AGREGAR ADICIONALES O EXTRAS -->
     <div id="modal-agregar-extra-wrapper" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999999; align-items: center; justify-content: center; padding: 15px; box-sizing: border-box;">
         <div style="background: #ffffff; width: 100%; max-width: 420px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); overflow: hidden; border-top: 5px solid #b58105;">
             <div style="padding: 18px; background: #fafbfc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin: 0; color: #856404; font-size: 1.1rem;" id="titulo-modal-extra-dinamico">🧀 Cargar Extra</h3>
+                <h3 style="margin: 0; color: #856404; font-size: 1.1rem;" id="titulo-modal-extra-dinamico">🧀🧀🧀 Cargar Extra</h3>
                 <button type="button" onclick="cerrarModalExtras()" style="background: none; border: none; font-size: 20px; color: #94a3b8; cursor: pointer; font-weight: bold;">&times;</button>
             </div>
             <form action="<?php echo URL_BASE; ?>controllers/PedidoController.php" method="POST" style="padding: 20px; margin: 0;">
@@ -590,232 +818,314 @@ endif;
                 <input type="hidden" name="pedido_detalle_id" id="modal-extra-detalle-id">
                 <input type="hidden" name="precio_cobrado" id="modal-extra-precio-hidden">
                 <input type="hidden" name="cantidad" value="1">
-                
                 <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; color: #1b4332;">Seleccione el Adicional / Modificador</label>
+                    <label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; color: #1b4332;">Seleccione el Adicional</label>
                     <select id="select-ingrediente-extra" name="producto_id" class="form-control" required onchange="actualizarPrecioExtraVisual(this)">
                         <option value="">-- Seleccionar Adicional --</option>
-                        <?php foreach ($productosMenu as $prod): ?>
-                            <?php
-                            $nombre_minuscula = strtolower($prod['nombre']);
-                            if (strpos($nombre_minuscula, 'extra') !== false || strpos($nombre_minuscula, 'borde') !== false):
-                            ?>
-                                <option value="<?php echo $prod['id']; ?>" data-precio="<?php echo $prod['precio_base']; ?>">
-                                    <?php echo htmlspecialchars($prod['nombre']); ?> (+ C$ <?php echo number_format($prod['precio_base'], 2); ?>)
-                                </option>
-                            <?php endif; ?>
-                        <?php endforeach; ?>
+                        <?php foreach ($productosMenu as $prod): $nombre_minuscula = strtolower($prod['nombre']);
+                            if (strpos($nombre_minuscula, 'extra') !== false || strpos($nombre_minuscula, 'borde') !== false): ?>
+                                <option value="<?php echo $prod['id']; ?>" data-precio="<?php echo $prod['precio_base']; ?>"><?php echo htmlspecialchars($prod['nombre']); ?> (+ C$ <?php echo number_format($prod['precio_base'], 2); ?>)</option>
+                        <?php endif;
+                        endforeach; ?>
                     </select>
                 </div>
-                
-                <div style="background: #fffbeb; padding: 10px; border-radius: 6px; border: 1px solid #ffeeba; margin-bottom: 20px; font-size: 13px; color: #856404; font-weight: bold; text-align: right;">
-                    Cargo Extra: <span id="label-precio-extra-dinamico">C$ 0.00</span>
-                </div>
+                <div style="background: #fffbeb; padding: 10px; border-radius: 6px; border: 1px solid #ffeeba; margin-bottom: 20px; font-size: 13px; color: #856404; font-weight: bold; text-align: right;">Cargo Extra: <span id="label-precio-extra-dinamico">C$ 0.00</span></div>
                 <div style="display: flex; gap: 10px;">
                     <button type="button" onclick="cerrarModalExtras()" style="flex: 1; padding: 12px; border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 8px; font-weight: bold; color: #475569; cursor: pointer;">Cancelar</button>
-                    <button type="submit" style="flex: 1; padding: 12px; border: none; background: #b58105; color: #ffffff; border-radius: 8px; font-weight: bold; cursor: pointer;">🧀 Sumar Extra</button>
+                    <button type="submit" style="flex: 1; padding: 12px; border: none; background: #b58105; color: #ffffff; border-radius: 8px; font-weight: bold; cursor: pointer;">🧀🧀🧀🧀 Sumar Extra</button>
                 </div>
             </form>
         </div>
     </div>
-    <!-- 🧠🧠 SCRIPTS OPERATIVOS DEL PUNTO DE VENTA -->
-    <script>
-    /**
-     * 📁 FILTRADO TÁCTIL: Muestra u oculta los platos de la cuadrícula de forma instantánea
-     */
-    function filtrarCatalogoArea(categoriaId, elemento) {
-        const catId = parseInt(categoriaId);
-        
-        // Solo alteramos estilos activos si el elemento tocado es un botón (evita romper el select)
-        if (elemento && elemento.tagName === 'BUTTON') {
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('tab-active'));
-            elemento.classList.add('tab-active');
-        }
 
-        // Buscador universal elástico en la cuadrícula de tu tablet
-        const tarjetasProductos = document.querySelectorAll('.product-item-card, [data-cat-id]');
-        tarjetasProductos.forEach(card => {
-            const tarjetaCat = parseInt(card.getAttribute('data-cat-id'));
-            
-            // Si el combo marca 0 o el ID coincide con la categoría elegida, renderiza al instante
-            if (catId === 0 || tarjetaCat === catId) {
-                card.style.setProperty('display', 'flex', 'important'); 
-            } else {
-                card.style.setProperty('display', 'none', 'important'); 
-            }
-        });
-    }
-
-    /**
-     * 📦 INSERCIÓN RÁPIDA: Inyecta los datos en el formulario oculto y dispara el POST
-     */
-    function agregarProductoFila(productoId, nombre, precio) {
-        const form = document.getElementById('form-add-item-hidden');
-        const inputId = document.getElementById('hidden-prod-id');
-        const inputPrice = document.getElementById('hidden-prod-price');
-        const inputMixta = document.querySelector('input[name="es_mixta"]') || document.getElementsByName('es_mixta')[0];
-
-        // 🌟 NUEVO CANDADO DE MEMORIA PERSISTENTE: Guarda la categoría activa del mesero
-        const selectCategoria = document.querySelector('.category-select-wrapper select');
-        if (selectCategoria) {
-            localStorage.setItem('jungle_pizza_categoria_activa', selectCategoria.value);
-        }
-
-        if (form && inputId && inputPrice) {
-            inputId.value = productoId;
-            inputPrice.value = precio;
-            if (inputMixta) {
-                inputMixta.value = "0";
-            }
-            form.submit(); 
-        }
-    }
-
-    /**
-     * 🚚 ESTIMADOR DE DELIVERY: Recalcula el gran total sumando el motorizado en vivo
-     */
-    function recalcularGranTotalDelivery(montoEnvio) {
-        const subtotalElement = document.getElementById('resumen-subtotal-neto');
-        const totalElement = document.getElementById('resumen-total-final');
-        if (!subtotalElement || !totalElement) return;
-
-        const subtotalNeto = parseFloat(subtotalElement.getAttribute('data-neto')) || 0;
-        const envioNum = parseFloat(montoEnvio) || 0;
-        totalElement.innerText = "C$ " + (subtotalNeto + envioNum).toFixed(2);
-    }
-
-    /**
-     * 🧀 MODAL EXTRAS: Abre la solapa e indexa el ID de la fila de detalles de la comanda
-     */
-    function abrirModalModificadores(detalleId, nombreProducto) {
-        const modal = document.getElementById('modal-agregar-extra-wrapper');
-        const inputDetail = document.getElementById('modal-extra-detalle-id');
-        const titulo = document.getElementById('titulo-modal-extra-dinamico');
-        const select = document.getElementById('select-ingrediente-extra');
-        const labelPrecio = document.getElementById('label-precio-extra-dinamico');
-        const inputPrecioHidden = document.getElementById('modal-extra-precio-hidden');
-
-        if (modal && inputDetail) {
-            inputDetail.value = detalleId;
-            if (titulo) titulo.innerText = `🧀 Extras para: ${nombreProducto}`;
-            if (select) select.selectedIndex = 0;
-            if (labelPrecio) labelPrecio.innerText = "C$ 0.00";
-            if (inputPrecioHidden) inputPrecioHidden.value = "0.00";
-            modal.style.display = 'flex';
-        }
-    }
-
-    function cerrarModalExtras() {
-        const modal = document.getElementById('modal-agregar-extra-wrapper');
-        if (modal) { modal.style.display = 'none'; }
-    }
-
-    function actualizarPrecioExtraVisual(elementoSelect) {
-        const opcionSeleccionada = elementoSelect.options[elementoSelect.selectedIndex];
-        const labelPrecio = document.getElementById('label-precio-extra-dinamico');
-        const inputPrecioHidden = document.getElementById('modal-extra-precio-hidden');
-
-        if (opcionSeleccionada && elementoSelect.value !== "") {
-            const precioBase = parseFloat(opcionSeleccionada.getAttribute('data-precio')) || 0;
-            if (labelPrecio) labelPrecio.innerText = "C$ " + precioBase.toFixed(2);
-            if (inputPrecioHidden) inputPrecioHidden.value = precioBase.toFixed(2);
-        } else {
-            if (labelPrecio) labelPrecio.innerText = "C$ 0.00";
-            if (inputPrecioHidden) inputPrecioHidden.value = "0.00";
-        }
-    }
-
-    /**
-     * ❌ SOLICITAR BAJA: Activa el prompt de merma obligatorio para productos comandados
-     */
-    function solicitarBajaItem(detalleId, nombreProducto) {
-        const motivo = prompt(`❌ REMOVER DE LA COMANDA: ${nombreProducto}\nEscriba el motivo obligatorio para autorizar la remoción:`);
-        if (motivo) {
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '<?php echo URL_BASE; ?>controllers/PedidoController.php';
-            form.innerHTML = `
-                <input type="hidden" name="accion" value="quitar_item">
+    <!-- 🔄 MODAL EXCLUSIVO: TRANSFERENCIA / CAMBIO DE MESA EN CALIENTE (🔒 CON CANDADO MVC) -->
+    <div id="modal-cambio-mesa-wrapper" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999999; align-items: center; justify-content: center; padding: 15px; box-sizing: border-box;">
+        <div style="background: #ffffff; width: 100%; max-width: 440px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); overflow: hidden; border-top: 5px solid #e67e22;">
+            <div style="padding: 18px; background: #fafbfc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; color: #1b4332; font-size: 1.15rem;">🔄 Transferir Pedido a Otra Mesa</h3>
+                <button type="button" onclick="cerrarModalCambioMesa()" style="background: none; border: none; font-size: 20px; color: #94a3b8; cursor: pointer; font-weight: bold;">&times;</button>
+            </div>
+            <form action="<?php echo URL_BASE; ?>controllers/PedidoController.php" method="POST" style="padding: 20px; margin: 0;" onsubmit="this.querySelector('button[type=submit]').disabled=true;">
+                <input type="hidden" name="accion" value="cambiar_mesa_pedido">
                 <input type="hidden" name="pedido_id" value="<?php echo $pedido_id; ?>">
-                <input type="hidden" name="pedido_detalle_id" value="${detalleId}">
-                <input type="hidden" name="motivo_quitar" value="${motivo}">
-                <input type="hidden" name="fue_servido" value="1">
-            `;
-            document.body.appendChild(form);
-            form.submit();
+                <input type="hidden" name="mesa_origen_id" value="<?php echo $pedidoInfo['mesa_id']; ?>">
+                <div style="background: #fff4e6; padding: 10px; border-radius: 6px; border: 1px solid #ffe8cc; margin-bottom: 15px; font-size: 13px; color: #d9480f; font-weight: 600;">Mesa de Origen: <?php echo htmlspecialchars($pedidoInfo['nombre_area'] . ' - ' . $pedidoInfo['numero_mesa']); ?></div>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; color: #1b4332;">Seleccione la Mesa Destino (Sólo Libres)</label>
+                    <select name="mesa_destino_id" class="form-control" required style="width:100% !important; padding:12px !important; border:2px solid #e2e8f0 !important; border-radius:8px !important;">
+                        <option value="">-- Seleccionar Mesa Vacía --</option>
+                        <?php
+                        $stmtLibres = $db->query("SELECT m.*, a.nombre as nombre_area FROM mesas m INNER JOIN areas a ON m.area_id = a.id WHERE m.estado = 'disponible' AND m.deleted_at IS NULL ORDER BY a.nombre ASC, m.numero_mesa ASC");
+                        $mesasDisponibles = $stmtLibres->fetchAll(PDO::FETCH_ASSOC);
+                        foreach ($mesasDisponibles as $mLibre):
+                        ?>
+                            <option value="<?php echo $mLibre['id']; ?>"><?php echo htmlspecialchars($mLibre['nombre_area'] . ' - ' . $mLibre['numero_mesa']); ?> (Max: <?php echo $mLibre['capacidad']; ?> p.)</option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 25px;">
+                    <button type="button" onclick="cerrarModalCambioMesa()" style="flex: 1; padding: 12px; border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 8px; font-weight: bold; color: #475569; cursor: pointer;">Cancelar</button>
+                    <button type="submit" style="flex: 1; padding: 12px; border: none; background: #e67e22; color: #ffffff; border-radius: 8px; font-weight: bold; cursor: pointer;">🔄 Confirmar Cambio</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="mobile-pos-nav">
+        <button type="button" class="pos-tab-trigger active-tab" id="btn-tab-menu" onclick="cambiarVistaPos('menu')"><span style="font-size: 18px;">🍕🍕</span> Menú Platos</button>
+        <button type="button" class="pos-tab-trigger" id="btn-tab-ticket" onclick="cambiarVistaPos('ticket')"><span style="font-size: 18px;">🛒🛒</span> Mi Comanda (<span id="badge-contador-movil"><?php echo count($itemsComanda); ?></span>)</button>
+    </div>
+    <script>
+        // 🌟 1. BUSCADOR EN TIEMPO REAL (REACTIVO MULTI-FILTRO PERSISTENTE)
+        function ejecutarBusquedaRapidaItem(texto) {
+            const query = texto.toLowerCase().trim();
+            const tarjetas = document.querySelectorAll('.product-item-card');
+            const categoriaActiva = parseInt(document.getElementById('select-categoria-pos').value) || 0;
+
+            tarjetas.forEach(card => {
+                if (card.getAttribute('onclick') && card.getAttribute('onclick').includes('abrirModalPizzaMixta')) return;
+                const nombre = card.querySelector('.product-item-title').innerText.toLowerCase();
+                const catId = parseInt(card.getAttribute('data-cat-id')) || 0;
+                const coincideCat = (categoriaActiva === 0 || catId === categoriaActiva);
+                const coincideTexto = (nombre.includes(query));
+
+                if (coincideCat && coincideTexto) {
+                    card.style.setProperty('display', 'flex', 'important');
+                } else {
+                    card.style.setProperty('display', 'none', 'important');
+                }
+            });
         }
-    }
-    // 🚀 INYECTA ESTAS DOS FUNCIONES AL FINAL DE TU BLOQUE DE SCRIPT EN views/tomar_pedido.php:
 
-/**
- * 🍕 CONTROL TÁCTIL MODAL MIXTO: Unifica los identificadores de pantalla 
- * para forzar al navegador a desplegar el configurador de mitades combinadas.
- */
-function abrirModalPizzaMixta() {
-    // Apuntamos con precisión quirúrgica al ID real de tu contenedor físico de la Parte 4.A
-    const modalMixto = document.getElementById('modal-pizza-mixta-wrapper');
-    
-    if (modalMixto) {
-        // Cambiamos el display de 'none' a 'flex' para centrarlo estéticamente en la tablet
-        modalMixto.style.setProperty('display', 'flex', 'important');
-    } else {
-        console.error("🚨 ERROR JUNGLE POS: No se encontró el contenedor 'modal-pizza-mixta-wrapper' en el DOM.");
-    }
+        // 🌟 2. ADICIÓN ASÍNCRONA (RETENCION DE TEXTO EN EL INPUT Y CONGELACIÓN DE SCROLL)
+        function agregarProductoFila(productoId, nombre, precio) {
+            const form = document.getElementById('form-add-item-hidden');
+            if (!form) return;
+
+            const formData = new FormData();
+            formData.append('accion', 'agregar_item');
+            formData.append('pedido_id', form.querySelector('input[name="pedido_id"]').value);
+            formData.append('producto_id', productoId);
+            formData.append('cantidad', '1');
+            formData.append('precio_unitario', precio);
+            formData.append('es_mixta', '0');
+
+            const tarjetaPresionada = window.event?.currentTarget;
+            if (tarjetaPresionada) tarjetaPresionada.style.pointerEvents = 'none';
+
+            // Despacho asíncrono controlado en segundo plano
+            fetch(form.action, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    // Almacenamos los estados de scroll y la palabra exacta del input de búsqueda
+                    const scrollMenu = document.querySelector('.menu-products-layout')?.scrollTop || 0;
+                    const scrollTicket = document.querySelector('.ticket-rows-scroll')?.scrollTop || 0;
+                    const textoBuscador = document.getElementById('buscador-productos-pos').value || "";
+
+                    localStorage.setItem('pos_scroll_menu', scrollMenu);
+                    localStorage.setItem('pos_scroll_ticket', scrollTicket);
+                    localStorage.setItem('pos_texto_busqueda', textoBuscador); // Guardamos la memoria de texto
+
+                    location.reload();
+                })
+                .catch(error => {
+                    console.error("Error en pasarela POS:", error);
+                    if (tarjetaPresionada) tarjetaPresionada.style.pointerEvents = 'auto';
+                });
+        }
+        // Envía el nombre del cliente al servidor automáticamente al quitar el cursor del cuadro
+function guardarNombreClienteDinamico(nombre) {
+    const formData = new FormData();
+    formData.append('accion', 'actualizar_nombre_cliente_ajax');
+    formData.append('pedido_id', '<?php echo $pedido_id; ?>');
+    formData.append('cliente_nombre', nombre);
+
+    fetch('<?php echo URL_BASE; ?>controllers/PedidoController.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log("Nombre del cliente sincronizado en Jungle POS:", data);
+    })
+    .catch(error => console.error("Error al guardar el cliente:", error));
 }
 
-function cerrarModalPizzaMixta() {
-    const modalMixto = document.getElementById('modal-pizza-mixta-wrapper');
-    if (modalMixto) {
-        modalMixto.style.setProperty('display', 'none', 'important');
-    }
-}
 
+        // 🌟 3. ACCIONES DE CONTROL EXCLUSIVAS DEL NUEVO MODAL DE CAMBIO DE MESA
+        function abrirModalCambioMesa() {
+            document.getElementById('modal-cambio-mesa-wrapper').style.setProperty('display', 'flex', 'important');
+        }
 
-    /**
-     * 👥 SINCRO COMENSALES: Suma o resta personas enviando un microsegundo AJAX en segundo plano
-     */
-    function ajustarComensales(cambio) {
-        const label = document.getElementById('label-num-personas');
-        if (!label) return;
+        function cerrarModalCambioMesa() {
+            document.getElementById('modal-cambio-mesa-wrapper').style.setProperty('none', 'important');
+        }
+        // 🌟 4. NUEVA FUNCIÓN: ELIMINACIÓN DE BEBIDAS CON CONSERVACIÓN DE TEXTO BUSCADO
+        function solicitarBajaBebida(productoId, nombreBebida) {
+            const motivo = prompt(`❌ REMOVER 1 UNIDAD DE BEBIDA:\n${nombreBebida}\nMotivo obligatorio de la modificación:`);
+            if (motivo) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '<?php echo URL_BASE; ?>controllers/PedidoController.php';
 
-        let valorActual = parseInt(label.innerText) || 1;
-        let nuevoValor = valorActual + cambio;
-        if (nuevoValor < 1) nuevoValor = 1;
+                form.innerHTML = `
+            <input type="hidden" name="accion" value="quitar_bebida_por_id">
+            <input type="hidden" name="pedido_id" value="<?php echo $pedido_id; ?>">
+            <input type="hidden" name="producto_id" value="${productoId}">
+            <input type="hidden" name="motivo_quitar" value="${motivo}">
+        `;
+                document.body.appendChild(form);
 
-        label.innerText = nuevoValor;
+                // Retenemos el texto actual también para la acción de remoción de líquidos
+                const textoBuscador = document.getElementById('buscador-productos-pos').value || "";
+                localStorage.setItem('pos_texto_busqueda', textoBuscador);
 
-        const formData = new FormData();
-        formData.append('accion', 'actualizar_comensales_ajax');
-        formData.append('pedido_id', '<?php echo $pedido_id; ?>');
-        formData.append('num_personas', nuevoValor);
-
-        fetch('<?php echo URL_BASE; ?>controllers/PedidoController.php', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status !== 'success') {
-                console.error("Error al sincronizar comensales con la base de datos.");
+                form.submit();
             }
-        })
-        .catch(error => console.error("Error de red comensales:", error));
-    }
-
-    /**
-     * 🌟 REINYECTOR DE FILTRO: Lee la memoria interna de la tablet al reencender la pantalla
-     */
-    document.addEventListener("DOMContentLoaded", function() {
-        const categoriaGuardada = localStorage.getItem('jungle_pizza_categoria_activa');
-        const selectCategoria = document.querySelector('.category-select-wrapper select');
-
-        if (categoriaGuardada !== null && selectCategoria) {
-            const catId = parseInt(categoriaGuardada);
-            selectCategoria.value = catId;
-            filtrarCatalogoArea(catId, selectCategoria);
         }
-    });
+
+        // 🌟 5. RESTO DE COMPORTAMIENTOS ORIGINALES INTEGRAOS INTACTOS
+        function cambiarVistaPos(vista) {
+            const btnMenu = document.getElementById('btn-tab-menu');
+            const btnTicket = document.getElementById('btn-tab-ticket');
+            if (vista === 'menu') {
+                document.body.classList.remove('ver-ticket-activo');
+                btnMenu.classList.add('active-tab');
+                btnTicket.classList.remove('active-tab');
+            } else {
+                document.body.classList.add('ver-ticket-activo');
+                btnTicket.classList.add('active-tab');
+                btnMenu.classList.remove('active-tab');
+            }
+        }
+
+        function filtrarCatalogoArea(categoriaId, elemento) {
+            const catId = parseInt(categoriaId);
+            document.getElementById('buscador-productos-pos').value = ""; // Limpia al cambiar de categoría principal
+            if (elemento && elemento.tagName === 'BUTTON') {
+                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('tab-active'));
+                elemento.classList.add('tab-active');
+            }
+            const tarjetasProductos = document.querySelectorAll('.product-item-card');
+            tarjetasProductos.forEach(card => {
+                const tarjetaCat = parseInt(card.getAttribute('data-cat-id'));
+                if (catId === 0 || tarjetaCat === catId) {
+                    card.style.setProperty('display', 'flex', 'important');
+                } else {
+                    card.style.setProperty('display', 'none', 'important');
+                }
+            });
+        }
+
+        function recalcularGranTotalDelivery(montoEnvio) {
+            const subtotalElement = document.getElementById('resumen-subtotal-neto');
+            const totalElement = document.getElementById('resumen-total-final');
+            if (!subtotalElement || !totalElement) return;
+            const subtotalNeto = parseFloat(subtotalElement.getAttribute('data-neto')) || 0;
+            const envioNum = parseFloat(montoEnvio) || 0;
+            totalElement.innerText = "C$ " + (subtotalNeto + envioNum).toFixed(2);
+        }
+
+        function abrirModalModificadores(detalleId, nombreProducto) {
+            const modal = document.getElementById('modal-agregar-extra-wrapper');
+            const inputDetail = document.getElementById('modal-extra-detalle-id');
+            const titulo = document.getElementById('titulo-modal-extra-dinamico');
+            if (modal && inputDetail) {
+                inputDetail.value = detalleId;
+                if (titulo) titulo.innerText = `🧀 Extras para: ${nombreProducto}`;
+                modal.style.display = 'flex';
+            }
+        }
+
+        function cerrarModalExtras() {
+            document.getElementById('modal-agregar-extra-wrapper').style.display = 'none';
+        }
+
+        function actualizarPrecioExtraVisual(sel) {
+            const opt = sel.options[sel.selectedIndex];
+            const lbl = document.getElementById('label-precio-extra-dinamico');
+            const hid = document.getElementById('modal-extra-precio-hidden');
+            if (opt && sel.value !== "") {
+                const p = parseFloat(opt.getAttribute('data-precio')) || 0;
+                if (lbl) lbl.innerText = "C$ " + p.toFixed(2);
+                if (hid) hid.value = p.toFixed(2);
+            } else {
+                if (lbl) lbl.innerText = "C$ 0.00";
+                if (hid) hid.value = "0.00";
+            }
+        }
+
+        function solicitarBajaItem(detalleId, nombreProducto) {
+            const motivo = prompt(`❌ REMOVER DE LA COMANDA:\n${nombreProducto}\nMotivo obligatorio:`);
+            if (motivo) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '<?php echo URL_BASE; ?>controllers/PedidoController.php';
+                form.innerHTML = `<input type="hidden" name="accion" value="quitar_item"><input type="hidden" name="pedido_id" value="<?php echo $pedido_id; ?>"><input type="hidden" name="pedido_detalle_id" value="${detalleId}"><input type="hidden" name="motivo_quitar" value="${motivo}"><input type="hidden" name="fue_servido" value="1">`;
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
+        function abrirModalPizzaMixta() {
+            const m = document.getElementById('modal-pizza-mixta-wrapper');
+            if (m) m.style.setProperty('display', 'flex', 'important');
+        }
+
+        function cerrarModalPizzaMixta() {
+            document.getElementById('modal-pizza-mixta-wrapper').style.setProperty('none', 'important');
+        }
+
+        function ajustarComensales(cambio) {
+            const label = document.getElementById('label-num-personas');
+            if (!label) return;
+            let v = (parseInt(label.innerText) || 1) + cambio;
+            if (v < 1) v = 1;
+            label.innerText = v;
+            const formData = new FormData();
+            formData.append('accion', 'actualizar_comensales_ajax');
+            formData.append('pedido_id', '<?php echo $pedido_id; ?>');
+            formData.append('num_personas', v);
+            fetch('<?php echo URL_BASE; ?>controllers/PedidoController.php', {
+                method: 'POST',
+                body: formData
+            });
+        }
+
+        // 🌟 6. DOM READY: ENGINE DE RESTAURACIÓN COMPLETO (TEXTOS, FILTROS Y SCROLL)
+        document.addEventListener("DOMContentLoaded", function() {
+            const catG = localStorage.getItem('jungle_pizza_categoria_activa');
+            const selC = document.querySelector('.category-select-wrapper select');
+            if (catG !== null && selC) {
+                selC.value = parseInt(catG);
+                filtrarCatalogoArea(parseInt(catG), selC);
+            }
+            if (localStorage.getItem('pos_vista_activa') === 'ticket' && window.innerWidth < 600) {
+                cambiarVistaPos('ticket');
+            }
+
+            // RESTAURACIÓN DE TEXTO: Recupera la palabra escrita por el mesero y re-aplica el filtro de inmediato
+            const textoGuardado = localStorage.getItem('pos_texto_busqueda');
+            if (textoGuardado) {
+                const inputBuscador = document.getElementById('buscador-productos-pos');
+                if (inputBuscador) {
+                    inputBuscador.value = textoGuardado;
+                    ejecutarBusquedaRapidaItem(textoGuardado); // Disparamos el filtrado al instante
+                    inputBuscador.focus(); // Fijamos el cursor en el input
+                }
+                localStorage.removeItem('pos_texto_busqueda'); // Limpiamos caché limpia para el próximo producto
+            }
+
+            // Restauración exacta de posiciones de scroll (Congelación táctil en rejilla y comanda)
+            const sMenu = localStorage.getItem('pos_scroll_menu');
+            const sTicket = localStorage.getItem('pos_scroll_ticket');
+            if (sMenu && document.querySelector('.menu-products-layout')) document.querySelector('.menu-products-layout').scrollTop = parseInt(sMenu);
+            if (sTicket && document.querySelector('.ticket-rows-scroll')) document.querySelector('.ticket-rows-scroll').scrollTop = parseInt(sTicket);
+        });
     </script>
     <script src="<?php echo URL_BASE; ?>public/js/main.js"></script>
 </body>
+
 </html>
