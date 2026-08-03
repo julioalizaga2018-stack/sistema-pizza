@@ -33,7 +33,9 @@ class KdsController {
     }
 
     private function procesarCambioEstado() {
-        header('Content-Type: application/json');
+        // Asegurarnos de que no hay salida previa que rompa el JSON
+        while (ob_get_level()) { ob_end_clean(); }
+        header('Content-Type: application/json; charset=utf-8');
 
         $detalle_id = intval($_POST['detalle_id'] ?? 0);
         $nuevo_estado = trim($_POST['nuevo_estado'] ?? '');
@@ -72,7 +74,8 @@ class KdsController {
     }
 
     private function consultarColaRefresco() {
-        header('Content-Type: application/json');
+        while (ob_get_level()) { ob_end_clean(); }
+        header('Content-Type: application/json; charset=utf-8');
 
         $area_produccion = trim($_POST['area_produccion'] ?? 'cocina');
         $comandas = $this->modelo->obtenerComandasPorEstacion($area_produccion);

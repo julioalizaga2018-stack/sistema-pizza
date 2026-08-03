@@ -274,19 +274,33 @@ function alterarEstadoItem(detalleId, nuevoEstado) {
 
     fetch('index.php?v=kds_monitor&estacion=' + estacionActualKds, {
         method: 'POST',
-        body: formData
+        body: formData,
+        credentials: 'same-origin',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
     })
-    .then(response => response.json())
+    .then(async response => {
+        const text = await response.text();
+        try {
+            const data = JSON.parse(text);
+            return data;
+        } catch (e) {
+            console.error('Respuesta no JSON de KDS:', text);
+            throw new Error('Respuesta inválida del servidor: ' + (text.substring(0, 200)));
+        }
+    })
     .then(data => {
-        if (data.status === 'success') {
+        if (data && data.status === 'success') {
             window.location.reload();
         } else {
-            alert('⚠ Error en KDS: ' + data.msg);
+            console.warn('KDS retornó error:', data);
+            alert('⚠ Error en KDS: ' + (data.msg || 'Respuesta inesperada'));
         }
     })
     .catch(err => {
-        console.error('Error en red KDS transicion:', err);
-        alert('No se pudo conectar con el servidor KDS.');
+        console.error('Error en petición a KDS:', err);
+        alert('No se pudo conectar con el servidor KDS. Revisa la consola para más detalles.');
     });
 }
 
