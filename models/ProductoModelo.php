@@ -141,9 +141,10 @@ class ProductoModelo extends Conexion {
 
     // BORRADO LÓGICO: Registra la fecha de baja para no romper el historial de comandas
     public function eliminarProductoLogico($id) {
-        $sql = "UPDATE productos SET deleted_at = CURRENT_TIMESTAMP WHERE id = :id";
+        $now = (new DateTime('now', new DateTimeZone('America/Managua')))->format('Y-m-d H:i:s');
+        $sql = "UPDATE productos SET deleted_at = :deleted_at WHERE id = :id";
         $stmt = $this->db->prepare($sql);
-        return $stmt->execute(['id' => $id]);
+        return $stmt->execute(['deleted_at' => $now, 'id' => $id]);
     }
 
     // NUEVO: Cuenta el total de registros que cumplen con los filtros

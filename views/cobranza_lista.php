@@ -92,23 +92,40 @@ $msg_success = $_GET['success'] ?? null;
                                 <tr>
                                     <td><code>#<?php echo $p['id']; ?></code></td>
                                     <td style="font-size: 13px; color: #555; font-family: monospace;">
-                                        <?php echo date('d/m/Y g:i a', strtotime($p['created_at'])); ?>
-                                    </td>
-                                                                        <td>
-                                        <?php
-                                        // Renderizado limpio de Área y Mesa sin redundancias
-                                        if ($p['tipo_pedido'] === 'local') {
-                                            $area = !empty($p['nombre_area']) ? htmlspecialchars($p['nombre_area']) : 'Salón';
-                                            $mesa = !empty($p['numero_mesa']) ? htmlspecialchars($p['numero_mesa']) : 'N/A';
-                                            
-                                            echo '<span class="badge-pos badge-local">🪑 ' . $area . ' - ' . $mesa . '</span>';
-                                        } elseif ($p['tipo_pedido'] === 'delivery') {
-                                            echo '<span class="badge-pos badge-delivery">🛵 Delivery</span>';
-                                        } elseif ($p['tipo_pedido'] === 'retiro') {
-                                            echo '<span class="badge-pos badge-retiro">📦 Llevar / Retiro</span>';
-                                        }
-                                        ?>
-                                    </td>
+                                    <td>
+<?php
+// Renderizado limpio de Área y Mesa sincronizado con Mesero y Cliente
+if ($p['tipo_pedido'] === 'local') {
+    $area = !empty($p['nombre_area']) ? htmlspecialchars($p['nombre_area']) : 'Salón';
+    $mesa = !empty($p['numero_mesa']) ? htmlspecialchars($p['numero_mesa']) : 'N/A';
+    
+    // 1. Imprimimos el indicador de ubicación original de la pizzería
+    echo '<span class="badge-pos badge-local">🪑🪑 ' . $area . ' - ' . $mesa . '</span>';
+    
+    // 2. 🌟 NUEVO: Si el pedido fue dividido o tiene un nombre de cliente asignado, lo estampamos a la par
+    if (!empty($p['cliente_nombre'])) {
+        echo '<span class="badge-pos" style="background-color: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; margin-left: 5px;">👤 ' . htmlspecialchars($p['cliente_nombre']) . '</span>';
+    }
+    
+    // 3. 🌟 NUEVO: Extraemos e inyectamos el nombre del mesero que atiende la mesa
+    // (Usa la columna exacta de tu consulta, ej: $p['nombre_mesero'] o $p['mesero'])
+    $alias_mesero = !empty($p['nombre_mesero']) ? $p['nombre_mesero'] : (!empty($p['mesero']) ? $p['mesero'] : 'Mesero');
+    echo '<br><span style="font-size: 11.5px; color: #64748b; font-weight: 700; margin-top: 4px; display: inline-block; padding-left: 4px;">🏃 Atendido por: <strong>' . htmlspecialchars($alias_mesero) . '</strong></span>';
+
+} elseif ($p['tipo_pedido'] === 'delivery') {
+    echo '<span class="badge-pos badge-delivery">🛵🛵 Delivery</span>';
+    if (!empty($p['cliente_nombre'])) {
+        echo '<br><span style="font-size: 12px; color: #475569; font-weight: bold; display:block; margin-top:3px;">👤 Cliente: ' . htmlspecialchars($p['cliente_nombre']) . '</span>';
+    }
+} elseif ($p['tipo_pedido'] === 'retiro') {
+    echo '<span class="badge-pos badge-retiro">📦📦 Llevar / Retiro</span>';
+    if (!empty($p['cliente_nombre'])) {
+        echo '<br><span style="font-size: 12px; color: #475569; font-weight: bold; display:block; margin-top:3px;">👤 Cliente: ' . htmlspecialchars($p['cliente_nombre']) . '</span>';
+    }
+}
+?>
+</td>
+
 
                                     <td>
                                         <span class="badge-pos badge-estado">

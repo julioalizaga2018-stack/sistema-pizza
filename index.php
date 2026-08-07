@@ -285,21 +285,25 @@ break;
             header('Location: index.php?v=login');
             exit;
         }
-        
+
         // Filtro de seguridad por ID de Comanda: Evita entrar a pantallas vacías
         $pedido_id = isset($_GET['pedido_id']) ? intval($_GET['pedido_id']) : 0;
         if ($pedido_id <= 0) {
             header('Location: index.php?v=mesas&error=' . urlencode('Seleccione una mesa o abra una comanda válida.'));
             exit;
         }
-        
+
         require_once __DIR__ . '/views/tomar_pedido.php';
         break;
+    case 'reporte_ventas':
+        require_once 'views/reporte_ventas.php';
+        break;
+
 
     case 'abrir_comanda':
-        if (!isset($_SESSION['usuario_id'])) { 
-            header('Location: index.php?v=login'); 
-            exit; 
+        if (!isset($_SESSION['usuario_id'])) {
+            header('Location: index.php?v=login');
+            exit;
         }
 
         $mesa_id       = isset($_GET['mesa_id']) ? intval($_GET['mesa_id']) : 0;

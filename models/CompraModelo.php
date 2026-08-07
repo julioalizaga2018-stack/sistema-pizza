@@ -116,12 +116,12 @@ class CompraModelo extends Conexion {
         // 5. ANALÍTICA MENSUAL: Agrupa y totaliza las ventas entregadas por Año y Mes
     public function obtenerVentasMensualesHistorial($anio) {
         $sql = "SELECT 
-                    MONTH(created_at) as mes_numero,
+                    MONTH(CONVERT_TZ(created_at, '+00:00', '-06:00')) as mes_numero,
                     SUM(total) as total_ventas_mes,
                     COUNT(id) as transacciones_ventas
                 FROM pedidos 
-                WHERE estado = 'entregado' AND YEAR(created_at) = :anio
-                GROUP BY MONTH(created_at)
+                WHERE estado = 'entregado' AND YEAR(CONVERT_TZ(created_at, '+00:00', '-06:00')) = :anio
+                GROUP BY MONTH(CONVERT_TZ(created_at, '+00:00', '-06:00'))
                 ORDER BY mes_numero DESC";
         $stmt = $this->db->prepare($sql);
         $stmt->execute(['anio' => (int)$anio]);

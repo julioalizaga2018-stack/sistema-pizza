@@ -17,15 +17,18 @@ class PedidoModelo extends Conexion {
             $this->db->beginTransaction();
             $id_mesa = ($tipo_pedido === 'local') ? $mesa_id : null;
             
-            $sql = "INSERT INTO pedidos (usuario_id, caja_turno_id, mesa_id, tipo_pedido, monto_envio, estado, total) 
-                    VALUES (:usuario_id, :caja_turno_id, :mesa_id, :tipo_pedido, :monto_envio, 'pendiente', 0.00)";
+            $now = (new DateTime('now', new DateTimeZone('America/Managua')))->format('Y-m-d H:i:s');
+            $sql = "INSERT INTO pedidos (usuario_id, caja_turno_id, mesa_id, tipo_pedido, monto_envio, estado, total, created_at, updated_at) 
+                    VALUES (:usuario_id, :caja_turno_id, :mesa_id, :tipo_pedido, :monto_envio, 'pendiente', 0.00, :created_at, :updated_at)";
             $stmt = $this->db->prepare($sql);
             $stmt->execute([
                 'usuario_id' => $usuario_id,
                 'caja_turno_id' => $caja_turno_id,
                 'mesa_id' => $id_mesa,
                 'tipo_pedido' => $tipo_pedido,
-                'monto_envio' => $monto_envio
+                'monto_envio' => $monto_envio,
+                'created_at' => $now,
+                'updated_at' => $now
             ]);
             $pedido_id = $this->db->lastInsertId();
 
@@ -153,9 +156,10 @@ class PedidoModelo extends Conexion {
             $stmtItems = $this->db->prepare($sqlItems);
             $stmtItems->execute(['pedido_id' => $id_limpio]);
 
-            $sqlHeader = "UPDATE pedidos SET updated_at = NOW() WHERE id = :pedido_id";
+            $now = (new DateTime('now', new DateTimeZone('America/Managua')))->format('Y-m-d H:i:s');
+            $sqlHeader = "UPDATE pedidos SET updated_at = :updated_at WHERE id = :pedido_id";
             $stmtHeader = $this->db->prepare($sqlHeader);
-            $stmtHeader->execute(['pedido_id' => $id_limpio]);
+            $stmtHeader->execute(['updated_at' => $now, 'pedido_id' => $id_limpio]);
 
             $this->db->commit();
             $this->actualizarTotalesPedido($id_limpio);
@@ -201,5 +205,91 @@ class PedidoModelo extends Conexion {
             return false;
         }
     }
+        /**
+     * 👥 DIVIDIR CUENTA: Crea una comanda hermana para la misma mesa, transfiere los productos 
+     * seleccionados y arrastra de forma inteligente el nombre del cliente.
+     */
+    public function dividirItemsAPedidoNuevo($pedido_origen_id, $detalles_a_mover) {
+        try {
+            // Iniciamos la transacción utilizando el pool del motor nativo ($this->db)
+            $this->db->beginTransaction();
+
+            // 1. Extraemos la información base del ticket original (incluyendo la nueva columna cliente_nombre)
+            $stmtOrig = $this->db->prepare("SELECT usuario_id, caja_turno_id, mesa_id, tipo_pedido, cliente_nombre FROM pedidos WHERE id = :id LIMIT 1");
+            $stmtOrig->execute(['id' => $pedido_origen_id]);
+            $orig = $stmtOrig->fetch(PDO::FETCH_ASSOC);
+
+            if (!$orig) { 
+                throw new Exception("Pedido de origen no encontrado."); 
+            }
+
+            // 2. Insertamos la nueva comanda hermana asignada a la misma mesa física
+            $sqlNuevo = "INSERT INTO pedidos (usuario_id, caja_turno_id, mesa_id, tipo_pedido, cliente_nombre, monto_envio, estado, total) 
+                         VALUES (:usuario_id, :caja_turno_id, :mesa_id, :tipo_pedido, :cliente_nombre, 0.00, 'pendiente', 0.00)";
+            $stmtNuevo = $this->db->prepare($sqlNuevo);
+            
+            // Asignamos un rótulo automático para que el cajero identifique la división al instante
+            $nombre_subcuenta = !empty($orig['cliente_nombre']) ? $orig['cliente_nombre'] . " (Separado)" : "Cliente Separado";
+            
+            $stmtNuevo->execute([
+                'usuario_id' => $orig['usuario_id'],
+                'caja_turno_id' => $orig['caja_turno_id'],
+                'mesa_id' => $orig['mesa_id'],
+                'tipo_pedido' => $orig['tipo_pedido'],
+                'cliente_nombre' => $nombre_subcuenta
+            ]);
+            $nuevo_pedido_id = $this->db->lastInsertId();
+
+            // 3. Reasignamos las filas de productos marcadas hacia el ID de la nueva cuenta
+            $stmtMover = $this->db->prepare("UPDATE pedido_detalles SET pedido_id = :nuevo_id WHERE id = :detalle_id");
+            foreach ($detalles_a_mover as $det_id) {
+                $stmtMover->execute([
+                    'nuevo_id' => $nuevo_pedido_id,
+                    'detalle_id' => intval($det_id)
+                ]);
+            }
+
+            // Consolidamos la operación en la base de datos de manera indestructible
+            $this->db->commit();
+
+            // 4. Recalculamos la matemática contable de ambos tickets de forma aislada
+            $this->actualizarTotalesPedido($pedido_origen_id);
+            $this->actualizarTotalesPedido($nuevo_pedido_id);
+
+            return $nuevo_pedido_id;
+        } catch (Exception $e) {
+            // Si ocurre una anomalía, revertimos todo al estado inicial para proteger la caja
+            $this->db->rollBack();
+            return false;
+        }
+    }
+        /**
+     * 📊 REPORTE GERENCIAL: Obtiene un resumen histórico de ingresos netos,
+     * propinas recaudadas y volumen de tickets cerrados por cada día.
+     */
+    public function obtenerResumenVentasDiarias() {
+        try {
+            // Filtramos únicamente los pedidos en estado 'entregado' (ya cobrados en caja)
+            $sql = "SELECT 
+                        DATE(CONVERT_TZ(created_at, '+00:00', '-06:00')) as fecha,
+                        COUNT(id) as total_pedidos,
+                        SUM(total) as ingresos_totales,
+                        SUM(monto_propina) as total_propinas,
+                        SUM(monto_envio) as total_delivery,
+                        SUM(monto_descuento) as total_descuentos
+                    FROM pedidos 
+                    WHERE estado = 'entregado'
+                    GROUP BY DATE(CONVERT_TZ(created_at, '+00:00', '-06:00'))
+                    ORDER BY DATE(CONVERT_TZ(created_at, '+00:00', '-06:00')) DESC";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            return [];
+        }
+    }
+
+
 }
 ?>

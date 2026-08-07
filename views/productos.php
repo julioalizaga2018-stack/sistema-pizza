@@ -140,29 +140,41 @@ $msg_success = $_GET['success'] ?? null;
                             </label>
                         </div>
 
-                        <!-- Fila 6: Valores de Inventario Físico (Existencias Blindadas en Edición) -->
-                        <div class="form-row-grid" id="inventario-inputs-box" style="margin-bottom: 15px;">
-                            <div>
-                                <label style="display:block; margin-bottom:5px; font-weight:600; font-size:14px; color:var(--verde-oscuro);">Existencias Actuales</label>
+                       <!-- Fila 6: Valores de Inventario Físico (Existencias Blindadas en Edición con Permisos VIP) -->
+<div class="form-row-grid" id="inventario-inputs-box" style="margin-bottom: 15px;">
+    <div>
+        <label style="display:block; margin-bottom:5px; font-weight:600; font-size:14px; color:var(--verde-oscuro);">Existencias Actuales</label>
 
-                                <!-- 🔒 DOBLE CANDADO POS: Se bloquea permanentemente si el producto ya está registrado y maneja inventario -->
-                                <?php
-                                $bloquear_existencias = ($productoEditar && (int)$productoEditar['maneja_stock'] === 1);
-                                ?>
+        <!-- 🔒 DOBLE CANDADO INTELIGENTE POS: Se bloquea según el estado del stock y los privilegios de la sesión -->
+        <?php
+        // 1. Extraemos el rol de la sesión activa del usuario logueado en la sucursal
+        $id_rol_activo = isset($_SESSION['rol_id']) ? (int)$_SESSION['rol_id'] : 0;
 
-                                <input type="number" step="0.01" name="stock_actual" id="stock_actual" class="form-control"
-                                    value="<?php echo htmlspecialchars($productoEditar['stock_actual'] ?? '0.00'); ?>"
-                                    <?php if ($bloquear_existencias): ?>
-                                    disabled style="background-color: #cbd5e1; color: #475569; cursor: not-allowed; font-weight: bold;"
-                                    title="Este producto maneja inventario. Las existencias reales solo pueden modificarse mediante la vista de Ajustes oficiales o Compras"
-                                    <?php endif; ?>>
-                            </div>
-                            <div>
-                                <label style="display:block; margin-bottom:5px; font-weight:600; font-size:14px; color:var(--verde-oscuro);">Alerta Mínimo</label>
-                                <input type="number" step="0.01" name="stock_minimo" id="stock_minimo" class="form-control"
-                                    value="<?php echo htmlspecialchars($productoEditar['stock_minimo'] ?? '0.00'); ?>">
-                            </div>
-                        </div>
+        // 2. Evaluamos si el usuario es superadmin (1) o admin (2) según tu tabla de phpMyAdmin
+        $es_usuario_gerencial = ($id_rol_activo === 1 || $id_rol_activo === 2);
+
+        // 3. El campo se bloquea SOLO si maneja inventario Y el usuario NO es jefe o administrador
+        $bloquear_existencias = ($productoEditar && (int)$productoEditar['maneja_stock'] === 1 && !$es_usuario_gerencial);
+        ?>
+
+        <input type="number" step="0.01" name="stock_actual" id="stock_actual" class="form-control"
+            value="<?php echo htmlspecialchars($productoEditar['stock_actual'] ?? '0.00'); ?>"
+            <?php if ($bloquear_existencias): ?>
+                disabled 
+                style="background-color: #cbd5e1; color: #475569; cursor: not-allowed; font-weight: bold;"
+                title="Este producto maneja inventario. Las existencias reales solo pueden modificarse mediante la vista de Ajustes oficiales o Compras"
+            <?php else: ?>
+                style="background-color: #fafbfc; color: #000000; font-weight: bold;"
+                title="Acceso Gerencial: Tienes permisos para modificar directamente el inventario físico de la sucursal."
+            <?php endif; ?>>
+    </div>
+    <div>
+        <label style="display:block; margin-bottom:5px; font-weight:600; font-size:14px; color:var(--verde-oscuro);">Alerta Mínimo</label>
+        <input type="number" step="0.01" name="stock_minimo" id="stock_minimo" class="form-control"
+            value="<?php echo htmlspecialchars($productoEditar['stock_minimo'] ?? '0.00'); ?>">
+    </div>
+</div>
+
 
 
 
@@ -305,51 +317,57 @@ $msg_success = $_GET['success'] ?? null;
     </div> <!-- Fin de dashboard-layout -->
 
     <script>
-        function toggleStockFields(checked) {
-            const container = document.getElementById('inventario-inputs-box');
-            const actualInput = document.getElementById('stock_actual');
-            const minimoInput = document.getElementById('stock_minimo');
+      // views/productos.php (Página 12 - JS Engine con Evaluación de Permisos)
+function toggleStockFields(checked) {
+    const container = document.getElementById('inventario-inputs-box');
+    const actualInput = document.getElementById('stock_actual');
+    const minimoInput = document.getElementById('stock_minimo');
+    
+    if (!container || !actualInput || !minimoInput) return;
+    
+    // 🌟 Capturamos el rol inyectado desde el entorno de PHP de forma segura
+    const esGerencialJS = <?php echo ($id_rol_activo === 1 || $id_rol_activo === 2) ? 'true' : 'false'; ?>;
 
-            if (!container || !actualInput || !minimoInput) return;
-
-            if (checked) {
-                // Habilitamos el contenedor visual
-                container.style.opacity = '1';
-                container.style.pointerEvents = 'auto';
-
-                // 🔒 SEGURIDAD: Solo permitimos editar el stock inicial si NO tiene el atributo de bloqueo de base de datos
-                if (!actualInput.hasAttribute('title')) {
-                    actualInput.removeAttribute('readonly');
-                    actualInput.removeAttribute('disabled');
-                    actualInput.style.backgroundColor = '#fafbfc';
-                    actualInput.style.cursor = 'text';
-                }
-
-                minimoInput.removeAttribute('readonly');
-                minimoInput.removeAttribute('disabled');
-                minimoInput.style.backgroundColor = '#fafbfc';
-                minimoInput.style.cursor = 'text';
-
-                actualInput.setAttribute('required', 'required');
-                minimoInput.setAttribute('required', 'required');
-            } else {
-                // Si apagan el inventario, se congela a cero y se bloquea por completo
-                container.style.opacity = '0.4';
-                container.style.pointerEvents = 'none';
-
-                actualInput.setAttribute('disabled', 'disabled');
-                actualInput.style.backgroundColor = '#e2e8f0';
-                actualInput.style.cursor = 'not-allowed';
-                actualInput.removeAttribute('required');
-                actualInput.value = '0.00';
-
-                minimoInput.setAttribute('disabled', 'disabled');
-                minimoInput.style.backgroundColor = '#e2e8f0';
-                minimoInput.style.cursor = 'not-allowed';
-                minimoInput.removeAttribute('required');
-                minimoInput.value = '0.00';
-            }
+    if (checked) {
+        // Habilitamos el contenedor visual
+        container.style.opacity = '1';
+        container.style.pointerEvents = 'auto';
+        
+        // 🔒 LOCK DE SEGURIDAD INTERNO: Evaluamos el atributo Y el rango del usuario
+        if (!actualInput.hasAttribute('title') || esGerencialJS === true) {
+            actualInput.removeAttribute('readonly');
+            actualInput.removeAttribute('disabled');
+            actualInput.style.backgroundColor = '#fafbfc';
+            actualInput.style.cursor = 'text';
+            actualInput.style.color = '#000000';
         }
+        
+        minimoInput.removeAttribute('readonly');
+        minimoInput.removeAttribute('disabled');
+        minimoInput.style.backgroundColor = '#fafbfc';
+        minimoInput.style.cursor = 'text';
+        
+        actualInput.setAttribute('required', 'required');
+        minimoInput.setAttribute('required', 'required');
+    } else {
+        // Si apagan el inventario, se congela a cero y se bloquea por completo
+        container.style.opacity = '0.4';
+        container.style.pointerEvents = 'none';
+        
+        actualInput.setAttribute('disabled', 'disabled');
+        actualInput.style.backgroundColor = '#e2e8f0';
+        actualInput.style.cursor = 'not-allowed';
+        actualInput.removeAttribute('required');
+        actualInput.value = '0.00';
+        
+        minimoInput.setAttribute('disabled', 'disabled');
+        minimoInput.style.backgroundColor = '#e2e8f0';
+        minimoInput.style.cursor = 'not-allowed';
+        minimoInput.removeAttribute('required');
+        minimoInput.value = '0.00';
+    }
+}
+
 
 
         document.addEventListener("DOMContentLoaded", function() {

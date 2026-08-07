@@ -113,9 +113,10 @@ class UsuarioModelo extends Conexion {
         $usuarioActual = $this->obtenerUsuarioPorId($id);
         if (!$usuarioActual) return false;
 
-        $sql = "UPDATE usuarios SET deleted_at = CURRENT_TIMESTAMP WHERE id = :id AND rol_id <> 1";
+        $now = (new DateTime('now', new DateTimeZone('America/Managua')))->format('Y-m-d H:i:s');
+        $sql = "UPDATE usuarios SET deleted_at = :deleted_at WHERE id = :id AND rol_id <> 1";
         $stmt = $this->db->prepare($sql);
-        return $stmt->execute(['id' => $id]);
+        return $stmt->execute(['deleted_at' => $now, 'id' => $id]);
     }
 
 }

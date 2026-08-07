@@ -25,9 +25,10 @@ class SalonModelo extends Conexion {
     }
 
     public function eliminarAreaLogico($id) {
-        $sql = "UPDATE areas SET deleted_at = CURRENT_TIMESTAMP WHERE id = :id";
+        $now = (new DateTime('now', new DateTimeZone('America/Managua')))->format('Y-m-d H:i:s');
+        $sql = "UPDATE areas SET deleted_at = :deleted_at WHERE id = :id";
         $stmt = $this->db->prepare($sql);
-        return $stmt->execute(['id' => $id]);
+        return $stmt->execute(['deleted_at' => $now, 'id' => $id]);
     }
 
     // ============================================================================
@@ -62,9 +63,10 @@ class SalonModelo extends Conexion {
     }
 
     public function eliminarMesaLogico($id) {
-        $sql = "UPDATE mesas SET deleted_at = CURRENT_TIMESTAMP WHERE id = :id";
+        $now = (new DateTime('now', new DateTimeZone('America/Managua')))->format('Y-m-d H:i:s');
+        $sql = "UPDATE mesas SET deleted_at = :deleted_at WHERE id = :id";
         $stmt = $this->db->prepare($sql);
-        return $stmt->execute(['id' => $id]);
+        return $stmt->execute(['deleted_at' => $now, 'id' => $id]);
     }
 }
 ?>

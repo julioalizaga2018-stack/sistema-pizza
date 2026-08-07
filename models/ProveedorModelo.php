@@ -50,12 +50,13 @@ class Proveedor extends Conexion {
     // 4. Borrado Lógico: Cambia estado a inactivo y estampa la fecha de borrado
     public function eliminarLogico($id) {
         $db = $this->conectar();
+        $now = (new DateTime('now', new DateTimeZone('America/Managua')))->format('Y-m-d H:i:s');
         $sql = "UPDATE proveedores 
                 SET estado = 'inactivo', 
-                    fecha_borrado = CURRENT_TIMESTAMP 
+                    fecha_borrado = :fecha_borrado 
                 WHERE id = :id";
         $stmt = $db->prepare($sql);
-        return $stmt->execute([':id' => $id]);
+        return $stmt->execute([':id' => $id, ':fecha_borrado' => $now]);
     }
         // 5. Contar el total de proveedores activos (con soporte para el buscador)
     public function contarProveedoresFiltrados($buscar = '') {

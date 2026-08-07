@@ -139,6 +139,10 @@ $isCajaAbierta = $cajaModelSidebar->obtenerTurnoActivoGeneral();
                 <li>
                     <a href="<?php echo URL_BASE; ?>index.php?v=compras_lista" class="nav-link <?php echo ($vista_actual == 'compras_lista' || $vista_actual == 'compras_registrar') ? 'active' : ''; ?>">📦 Registro de Compras</a>
                 </li>
+                <!-- 🌟 INYECTADO: Acceso directo al nuevo reporte de cierres financieros diarios -->
+<li>
+    <a href="<?php echo URL_BASE; ?>index.php?v=reporte_ventas" class="nav-link <?php echo ($vista_actual == 'reporte_ventas') ? 'active' : ''; ?>">📊 Cierre de Ventas Diario</a>
+</li>
                 <li>
                     <a href="<?php echo URL_BASE; ?>index.php?v=reportes_mensuales" class="nav-link <?php echo ($vista_actual == 'reportes_mensuales') ? 'active' : ''; ?>">📊 Cierre Balance Mensual</a>
                 </li>

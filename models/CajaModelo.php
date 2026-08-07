@@ -30,9 +30,10 @@ public function obtenerTurnoActivoGeneral() {
         if ($this->obtenerTurnoActivo($usuario_id)) {
             return false; 
         }
-        $sql = "INSERT INTO caja_turnos (usuario_id, monto_inicial, estado) VALUES (:usuario_id, :monto, 'abierta')";
+        $now = (new DateTime('now', new DateTimeZone('America/Managua')))->format('Y-m-d H:i:s');
+        $sql = "INSERT INTO caja_turnos (usuario_id, monto_inicial, estado, fecha_apertura) VALUES (:usuario_id, :monto, 'abierta', :fecha_apertura)";
         $stmt = $this->db->prepare($sql);
-        return $stmt->execute(['usuario_id' => $usuario_id, 'monto' => $monto_inicial]);
+        return $stmt->execute(['usuario_id' => $usuario_id, 'monto' => $monto_inicial, 'fecha_apertura' => $now]);
     }
 
     // CALCULAR VENTAS DEL TURNO: Suma todos los cobros reales efectuados en este turno
@@ -109,8 +110,9 @@ public function obtenerTurnoActivoGeneral() {
         
         $diferencia = $monto_final_real - $monto_esperado_sistema;
 
+        $now = (new DateTime('now', new DateTimeZone('America/Managua')))->format('Y-m-d H:i:s');
         $sql = "UPDATE caja_turnos 
-                SET fecha_cierre = CURRENT_TIMESTAMP,
+                SET fecha_cierre = :fecha_cierre,
                     total_efectivo = :t_efectivo,
                     total_tarjeta = :t_tarjeta,
                     total_transferencia = :t_trans,
@@ -123,6 +125,7 @@ public function obtenerTurnoActivoGeneral() {
         $stmt = $this->db->prepare($sql);
         return $stmt->execute([
             'id'         => $turno_id,
+            'fecha_cierre' => $now,
             't_efectivo' => $total_sistema_efectivo,
             't_tarjeta'  => $total_sistema_tarjeta,
             't_trans'    => $total_sistema_transferencia,

@@ -131,11 +131,11 @@ class CobranzaModelo extends Conexion {
             $params['num_pedido'] = $num_pedido;
         } else {
             if (!empty($desde)) {
-                $sql .= " AND DATE(created_at) >= :desde";
+                $sql .= " AND DATE(CONVERT_TZ(created_at, '+00:00', '-06:00')) >= :desde";
                 $params['desde'] = $desde;
             }
             if (!empty($hasta)) {
-                $sql .= " AND DATE(created_at) <= :hasta";
+                $sql .= " AND DATE(CONVERT_TZ(created_at, '+00:00', '-06:00')) <= :hasta";
                 $params['hasta'] = $hasta;
             }
         }
@@ -159,11 +159,11 @@ class CobranzaModelo extends Conexion {
             $params['num_pedido'] = $num_pedido;
         } else {
             if (!empty($desde)) {
-                $sql .= " AND DATE(p.created_at) >= :desde";
+                $sql .= " AND DATE(CONVERT_TZ(p.created_at, '+00:00', '-06:00')) >= :desde";
                 $params['desde'] = $desde;
             }
             if (!empty($hasta)) {
-                $sql .= " AND DATE(p.created_at) <= :hasta";
+                $sql .= " AND DATE(CONVERT_TZ(p.created_at, '+00:00', '-06:00')) <= :hasta";
                 $params['hasta'] = $hasta;
             }
         }
